@@ -1,0 +1,534 @@
+#include "grid.h"
+#include "logger.h"
+#include "timer/profiler.h"
+
+#include <fstream>
+#include <algorithm>
+#include <stdexcept>
+#include <random>
+#include <set>
+
+Grid::Grid(const std::string &filename)
+{
+    try
+    {
+        std::ifstream file(filename);
+        if (!file.is_open())
+        {
+            throw std::runtime_error("Could not open file: " + filename);
+        }
+
+        int cols = -1;
+
+        // Read the grid from the file
+        std::string line;
+
+        while (std::getline(file, line))
+        {
+            // validate line length and characters
+            if (cols == -1)
+            {
+                cols = line.length();
+            }
+            else if (line.length() != static_cast<size_t>(cols))
+            {
+                throw std::runtime_error("Inconsistent line length in grid file");
+            }
+
+            std::vector<Cell> row;
+            for (char c : line)
+            {
+                if (c != '#' && c != '.')
+                {
+                    throw std::runtime_error("Invalid character in grid file: " + std::string(1, c));
+                }
+                row.emplace_back(c);
+            }
+            _cells.push_back(row);
+        }
+        _rows = _cells.size();
+        _cols = cols;
+
+        _acrossWords.reserve(_rows); // Worst case: every row is a single word
+        _downWords.reserve(_cols);   // Worst case: every column is a single word
+
+        // ACROSS words — only create GridWords, cell linking happens in pass 2
+        std::vector<Cell *> current_word_cells;
+        int current_word_start_c = -1;
+
+        for (int r = 0; r < _rows; r++)
+        {
+            for (int c = 0; c < _cols; c++)
+            {
+                if (_cells[r][c].type == Cell::CellType::FILLABLE)
+                {
+                    current_word_cells.push_back(&_cells[r][c]);
+                    if (current_word_start_c == -1)
+                    {
+                        current_word_start_c = c;
+                    }
+                }
+                else if (_cells[r][c].type == Cell::CellType::BLACK)
+                {
+                    // end of current word if any
+                    if (current_word_cells.size() >= 2)
+                    {
+                        // ✅ Only create the GridWord, no cell linking yet
+                        _acrossWords.emplace_back(GridWordDirection::ACROSS, r, current_word_start_c, current_word_cells.size());
+                    }
+                    // reset current word
+                    current_word_cells.clear();
+                    current_word_start_c = -1;
+                }
+            }
+            // end of current word if any
+            if (current_word_cells.size() >= 2)
+            {
+                // ✅ Only create the GridWord, no cell linking yet
+                _acrossWords.emplace_back(GridWordDirection::ACROSS, r, current_word_start_c, current_word_cells.size());
+            }
+            // reset current word
+            current_word_cells.clear();
+            current_word_start_c = -1;
+        }
+
+        // DOWN words — only create GridWords, cell linking happens in pass 2
+        int current_word_start_r = -1;
+        for (int c = 0; c < _cols; c++)
+        {
+            for (int r = 0; r < _rows; r++)
+            {
+                if (_cells[r][c].type == Cell::CellType::FILLABLE)
+                {
+                    current_word_cells.push_back(&_cells[r][c]);
+                    if (current_word_start_r == -1)
+                    {
+                        current_word_start_r = r;
+                    }
+                }
+                else if (_cells[r][c].type == Cell::CellType::BLACK)
+                {
+                    // end of current word if any
+                    if (current_word_cells.size() >= 2)
+                    {
+                        // ✅ Only create the GridWord, no cell linking yet
+                        _downWords.emplace_back(GridWordDirection::DOWN, current_word_start_r, c, current_word_cells.size());
+                    }
+                    // reset current word
+                    current_word_cells.clear();
+                    current_word_start_r = -1;
+                }
+            }
+            // end of current word if any
+            if (current_word_cells.size() >= 2)
+            {
+                // ✅ Only create the GridWord, no cell linking yet
+                _downWords.emplace_back(GridWordDirection::DOWN, current_word_start_r, c, current_word_cells.size());
+            }
+            // reset current word
+            current_word_cells.clear();
+            current_word_start_r = -1;
+        }
+
+        // PASS 2: link cells to GridWords
+        // _acrossWords and _downWords are fully built and will NOT reallocate anymore,
+        // so pointers to their elements are stable from this point on.
+        for (auto &word : _acrossWords)
+        {
+            auto [row, col] = word.getPosition();
+            for (size_t i = 0; i < word.length; i++)
+            {
+                Cell* cell = &_cells[row][col + i];
+                cell->horizontal_word = &word; // ✅ Cell knows its horizontal word
+                word.addCell(cell);            // ✅ Word knows its cells
+            }
+        }
+
+        for (auto &word : _downWords)
+        {
+            auto [row, col] = word.getPosition();
+            for (size_t i = 0; i < word.length; i++)
+            {
+                Cell* cell = &_cells[row + i][col];
+                cell->vertical_word = &word;   // ✅ Cell knows its vertical word
+                word.addCell(cell);            // ✅ Word knows its cells
+            }
+        }
+
+        // Debug print
+        Logger::debug("Grid loaded successfully from file: {}", filename);
+        Logger::debug("Rows: {}, Cols: {}", _rows, _cols);
+        Logger::debug("Across words: {}", _acrossWords.size());
+        Logger::debug("Down words: {}", _downWords.size());
+
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Error loading grid: " << e.what() << std::endl;
+        throw; // Rethrow the exception after logging
+    }
+}
+
+Grid::~Grid() {}
+Grid::Grid(const Grid &other) : _rows(other._rows), _cols(other._cols), _cells(other._cells) {}
+
+Grid &Grid::operator=(const Grid &other)
+{
+    if (this != &other)
+    {
+        _rows = other._rows;
+        _cols = other._cols;
+        _cells = other._cells; // std::vector will handle the copying
+    }
+    return *this;
+}
+
+void Grid::setCell(int r, int c, int value)
+{
+    if (r >= 0 && r < _rows && c >= 0 && c < _cols)
+    {
+        _cells[r][c] = value;
+    }
+}
+
+int Grid::getValue(int r, int c) const
+{
+    if (r >= 0 && r < _rows && c >= 0 && c < _cols)
+    {
+        return _cells[r][c].value;
+    }
+    throw std::out_of_range("Cell coordinates out of range");
+}
+
+void Grid::print() const
+{
+    for (const auto &row : _cells)
+    {
+        std::string line{};
+        for (const auto &cell : row)
+        {
+            line += std::toupper(cell.value);
+        }
+        Logger::info("{}", line);
+    }
+}
+
+GridWord* Grid::getGridWordAt(unsigned int r, unsigned int c, GridWordDirection direction) const
+{
+    // cast a unsigned int para evitar warning
+    if (r >= static_cast<unsigned int>(_rows) || 
+        c >= static_cast<unsigned int>(_cols) || 
+        _cells[r][c].type != Cell::CellType::FILLABLE)
+    {
+        throw std::out_of_range("Cell coordinates out of range or cell is not fillable");
+    }
+    
+    if (direction == GridWordDirection::ACROSS)
+    {
+        return _cells[r][c].horizontal_word;
+    }
+    else if (direction == GridWordDirection::DOWN)
+    {
+        return _cells[r][c].vertical_word;
+    }
+    else
+    {
+        throw std::invalid_argument("Invalid grid word direction");
+    }
+    return nullptr; // Should never reach here
+}
+
+bool Grid::solve(const Dict &dict)
+{
+    /**
+     * We will track the grid words that we need to fill in a single vector, so that we can easily iterate through them and fill them one by one. We will start filling from the first grid word in the vector, and then we will move on to the next one until we have filled all the grid words or we have exhausted all the possibilities.
+     */
+    std::vector<GridWord*> _to_fill;
+
+    // to keep track of the filled grid words, so that we can easily backtrack when we need to
+    std::vector<GridWord*> _filled;
+
+    // fill the _to_fill vector with pointers to all the across and down words in the grid
+    for (auto &word : _acrossWords)
+    {
+        _to_fill.push_back(&word);
+    }
+    for (auto &word : _downWords)
+    {
+        _to_fill.push_back(&word);
+    }
+
+    // get a grid word
+    GridWord* firstWord = getNextGridWordToFill(_to_fill, _filled, dict);
+
+    // remove the current word from the _to_fill vector
+    _to_fill.erase(std::remove(_to_fill.begin(), _to_fill.end(), firstWord), _to_fill.end());
+
+    return solve(firstWord, _to_fill, _filled, dict);
+}
+
+bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fill, std::vector<GridWord*>& _filled, const Dict &dict)
+{
+    HG_PROFILE_SCOPE("Grid::solve");
+    // reshuffle the possible words to get a different solution each time
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
+    // Implement the logic to fill the grid starting from a specific cell (r, c)
+    // This is a placeholder for the actual filling algorithm
+
+    // get the grid_word corresponding to the current cell (r, c) and try to fill it with a word from the dictionary:
+    const std::string original_pattern = current_word_to_fill->getWord();
+
+    if(current_word_to_fill->possible_words.empty())
+    {
+        current_word_to_fill->possible_words = dict.getWordsByPattern(Pattern(original_pattern));
+        std::shuffle(current_word_to_fill->possible_words.begin(), current_word_to_fill->possible_words.end(), gen);
+    }
+    else
+    {
+        Pattern::FilterWordsByPattern(current_word_to_fill->possible_words, Pattern(original_pattern));
+    }
+
+    // For each instance in the backtracking algorithm, we need to track the important cells (cells that cross with the current grid word). In this way, we can keep a track of interest cells and dont repeat words that fill the interest cells with the same pattern.
+    std::vector<int> interest_indexes;
+    std::set<std::string> tried_patterns_for_interest_cells; 
+    for (size_t i = 0; i < current_word_to_fill->length; i++)
+    {
+        Cell* cell = current_word_to_fill->cells[i];
+        if (cell->horizontal_word != nullptr && cell->vertical_word != nullptr)
+        {
+            interest_indexes.push_back(i);
+        }
+    }
+
+    /**
+     * Original_pattern, possible_words and reshuffling are used to implement a backtracking algorithm to fill the grid.
+     * In this instance of the algorithm, those 3 patterns are constant.
+     */
+
+    // add the current gridWord to the _filled vector, so that we can easily backtrack when we need to
+    _filled.push_back(current_word_to_fill);
+
+    const auto [r,c] = current_word_to_fill->getPosition();
+    Logger::debug("Filling word in position: {}, {} with pattern: {}", r, c, original_pattern);
+
+    // to keep track of the patterns we have already tried for the current gridWord, so that we don't try the same pattern again and again in case of infinite loops
+    std::set<std::string> tried_patterns;
+
+    // lets account avoided words
+    int avoided = 0;
+
+    // MArk word as set
+    current_word_to_fill->set();
+
+    // crossing words:
+    std::vector<GridWord*> crossing_words = getCrossingWords(current_word_to_fill);
+
+    for (const auto &word : current_word_to_fill->possible_words)
+    {
+        // fill the gridWord with the current word
+        current_word_to_fill->setWord(word->str);
+
+        // get the patterns of the interest cells after filling the current gridWord, so that we can check if we have already tried this pattern for the current gridWord and avoid infinite loops
+        std::string pattern_for_interest_cells(current_word_to_fill->length, '_');
+        for (int i : interest_indexes)
+        {
+            pattern_for_interest_cells[i] = word->str[i];
+        }
+
+        // check if pattern is already tried
+        if (tried_patterns.count(pattern_for_interest_cells) > 0)
+        {
+            ++avoided;
+            continue; // skip this word and try the next one
+        }
+        else
+        {
+            tried_patterns.insert(pattern_for_interest_cells);
+        }
+
+        /**
+         * For each crossing word, check this guess word permits to advance
+         */
+        bool can_advance = true;
+        for (GridWord* crossing_word : crossing_words)
+        {
+            if (dict.getWordsByPattern(crossing_word->getWord()).empty())
+            {
+                can_advance = false;
+                break;
+            }
+        }
+        if(!can_advance)
+        {
+            ++avoided;
+            continue; // skip this word and try the next one
+        }
+
+        Logger::debug("Trying word: {} for grid word at position: {}, {}", word->str, r, c);
+        
+        // //Grid print
+        Logger::info("===============================");
+        Logger::info("Intermediate GRID");
+        Logger::info("===============================");
+        print();
+
+        // get the next gridWord to fill:
+        GridWord* next_grid_word_to_fill = getNextGridWordToFill(_to_fill, _filled, dict);
+
+        // End condition reached. GRID FILLED SUCCESSFULLY
+        if(next_grid_word_to_fill == nullptr)
+        {
+            // we have successfully filled the grid, so we can return true
+            return true; 
+        }
+
+        // remove the next gridWord from the _to_fill vector, so that we don't try to fill it again in the next recursive call
+        _to_fill.erase(std::remove(_to_fill.begin(), _to_fill.end(), next_grid_word_to_fill), _to_fill.end());
+
+        if(solve(next_grid_word_to_fill, _to_fill, _filled, dict))
+        {
+            // we have successfully filled the grid, so we can return true
+            return true; 
+        }
+
+        // need to reinsert the next gridWord to fill in the _to_fill vector, so that we can try to fill it again with a different word in the next iteration of the loop
+        _to_fill.push_back(next_grid_word_to_fill);
+    }
+
+    // Logger::debug("Backtracking from position: {}, {} with pattern: {}. Avoided {} words.", r, c, original_pattern, avoided);
+
+    /**
+     * Returning false here means that we have tried all possible words for the current gridWord and none of them fit, so we need to backtrack to the previous gridWord and try a different word for it. This is the essence of the backtracking algorithm.
+     *
+     * Need to restore the original pattern of the gridWord before backtracking, so that the previous gridWord can try a different word without being affected by the changes made by the current gridWord.
+     */
+    _filled.pop_back();
+    current_word_to_fill->setWord(original_pattern);
+    current_word_to_fill->possible_words.clear();
+    current_word_to_fill->unset();
+
+    // if avoided > 0, show as debug log:
+    if (avoided > 0)
+    {
+        Logger::debug("Backtracking from position: {}, {} with pattern: {}. Avoided {} words.", r, c, original_pattern, avoided);
+    }
+
+    return false;
+}
+
+std::vector<GridWord*> Grid::getCrossingWords(const GridWord* word) const
+{
+    std::vector<GridWord*> crossing_words;
+    for (Cell* cell : word->cells)
+    {
+        if (word->direction == GridWordDirection::ACROSS 
+            && cell->vertical_word != nullptr
+            && !cell->vertical_word->isSet() )
+        {
+            crossing_words.push_back(cell->vertical_word);
+        }
+        else if (word->direction == GridWordDirection::DOWN 
+            && cell->horizontal_word != nullptr
+            && !cell->horizontal_word->isSet() )
+        {
+            crossing_words.push_back(cell->horizontal_word);
+        }
+    }
+    return crossing_words;
+}
+
+// GridWord* Grid::getNextGridWordToFill(const std::vector<GridWord*>& _to_fill, const std::vector<GridWord*>& _filled)
+// {
+//     HG_PROFILE_SCOPE("Grid::getNextGridWordToFill");
+//     // This function should return the next grid word to fill based on some heuristic, such as the one with the fewest possible words that can fit in it. This is a common heuristic used in backtracking algorithms to reduce the search space and find solutions faster.
+
+//     if (_to_fill.empty())
+//     {
+//         return nullptr; 
+//     }
+
+//     if (_filled.empty())
+//     {
+//         return _to_fill[0]; // If no words have been filled yet, return the first word in the _to_fill vector
+//     }
+
+//     // Placeholder implementation: return a word that crosses with the most recently filled word. If not, return a word that crosses the last before filled word, and so on. If no word crosses with any of the filled words, return the first word in the _to_fill vector.
+//     // TODO: implement the heuristic to select the next grid word to fill
+//     // THIS IS WRONG AND NEEDS TO BE FIXED, BECAUSE IT CAN LEAD TO INFINITE LOOPS IF THE GRID WORDS ARE NOT PROPERLY CONNECTED. WE NEED TO IMPLEMENT A BETTER HEURISTIC TO SELECT THE NEXT GRID WORD TO FILL, SUCH AS THE ONE WITH THE FEWEST POSSIBLE WORDS THAT CAN FIT IN IT.
+//     for ( GridWord* _filled_word : _filled )
+//     {
+//         for (GridWord* _candidate : _to_fill)
+//         {
+//             if (crossing(_candidate, _filled_word))
+//             {
+//                 return _candidate;
+//             }
+//         }
+//     }
+
+//     /**
+//      * In the case where remaining grid words are totally separated from the filled grid words, we can just return the first word in the _to_fill vector, since there is no heuristic that can help us select a better word to fill.
+//      */
+//     return _to_fill[0]; 
+// }
+
+GridWord* Grid::getNextGridWordToFill(const std::vector<GridWord*>& _to_fill, const std::vector<GridWord*>& _filled, const Dict& dict)
+{
+    HG_PROFILE_SCOPE("Grid::getNextGridWordToFill");
+
+    if (_to_fill.empty()) return nullptr;
+    if (_filled.empty())  return _to_fill[0];
+
+    GridWord* best       = nullptr;
+    int       best_count = INT_MAX;
+
+    for (GridWord* candidate : _to_fill)
+    {
+        // Only consider words that cross with at least one filled word
+        bool crosses = false;
+        for (GridWord* filled : _filled)
+        {
+            if (crossing(candidate, filled)) { crosses = true; break; }
+        }
+        if (!crosses) continue;
+
+        // MRV: count how many words can still fit in this candidate
+        // The fewer options, the higher priority — fail early
+        int count = dict.getWordsByPattern(candidate->getWord()).size();
+
+        if (count == 0) return candidate; // Already dead end — pick it immediately to fail fast
+
+        if (count < best_count)
+        {
+            best_count = count;
+            best       = candidate;
+        }
+    }
+
+    // If no crossing word found, return first in _to_fill
+    return best ? best : _to_fill[0];
+}
+
+bool Grid::crossing(const GridWord* word1, const GridWord* word2)
+{
+    HG_PROFILE_SCOPE("Grid::crossing");
+    // This function should check if two grid words cross each other, which means that they share at least one cell. This is important for the backtracking algorithm to ensure that when we fill a grid word, we also update the crossing grid words accordingly.
+
+    // check direction is opposite
+    if (word1->direction == word2->direction) {
+        return false; // Words in the same direction cannot cross each other
+    }
+
+    // check cells:
+    for (Cell* cell1 : word1->cells) {
+        for (Cell* cell2 : word2->cells) {
+            if (cell1 == cell2) {
+                return true; // The two grid words cross each other
+            }
+        }
+    }
+
+    return false; // The two grid words do not cross each other
+}

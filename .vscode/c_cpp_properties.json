@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "HG_ASSETS_PATH=\"${workspaceFolder}/assets/\"",
+                "HG_DEFAULT_GRID_PATH=\"${workspaceFolder}/assets/grids/basic_6x6.grid\"",
+                "HG_DEFAULT_DICTIONARY_PATH=\"${workspaceFolder}/assets/words/garbi.txt\""
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "linux-gcc-x64",
+            // defines HG_PROJECT_SOURCE_DIR as a preprocessor macro with the value of the source directory
+            "compilerArgs": [
+                "-DHG_PROJECT_SOURCE_DIR=\"${workspaceFolder}\"",
+                "-DHG_DEFAULT_DICTIONARY_PATH=\"${workspaceFolder}/assets/words/garbi.txt\"",
+                "-DHG_DEFAULT_GRID_PATH=\"${workspaceFolder}/assets/grids/basic_6x6.grid\""
+            ]
+        }
+    ],
+    "version": 4
+}
