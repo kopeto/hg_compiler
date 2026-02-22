@@ -37,7 +37,7 @@ std::vector<std::string> Pattern::getPatternIndexes() const
         if (str[i] != '_')
         {
             char index[5];
-            snprintf(index, 5, "%c_%zu", std::toupper(str[i]), i);
+            snprintf(index, 5, "%c_%zu", std::toupper(str[i]), i % 32);
             indexes.emplace_back(index);
         }
     }

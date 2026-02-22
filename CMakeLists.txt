@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(hg_compiler
+project(HitzGurutzatuak
     VERSION 0.1.0
     DESCRIPTION "HG Compiler"
     LANGUAGES C CXX
@@ -22,6 +22,13 @@ option(ENABLE_SANITIZERS "Enable sanitizers in Debug" OFF)
 option(ENABLE_TIMERS "Enable timers for performance measurement" OFF)
 option(ENABLE_PROFILER "Enable function profiling" OFF)
 
+# Threads (link now, useful if needed later)
+find_package(Threads REQUIRED)
+
+# Find and link Qt6
+set(CMAKE_AUTOMOC ON)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
 # Source files (adjust to your actual project structure)
 file(GLOB_RECURSE HG_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
@@ -31,7 +38,9 @@ if(NOT HG_SOURCES)
     message(WARNING "No source files found in src/.")
 endif()
 
-add_executable(${PROJECT_NAME} ${HG_SOURCES})
+add_executable(${PROJECT_NAME} 
+    ${HG_SOURCES}
+)
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE
@@ -63,9 +72,10 @@ target_compile_definitions(${PROJECT_NAME}
         HG_ENABLE_PROFILER=$<IF:$<BOOL:${ENABLE_PROFILER}>,1,0>
 )
 
-# Threads (link now, useful if needed later)
-find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+    Threads::Threads
+    Qt6::Widgets
+)
 
 # Tests
 if(BUILD_TESTS)
@@ -80,6 +90,8 @@ if(BUILD_TESTS)
         src/pattern.cpp
         src/word.cpp
     )
+
+    target_compile_definitions(test_backtrack_correctness PRIVATE QT_NO_KEYWORDS)
 
     target_include_directories(test_backtrack_correctness PRIVATE
         ${CMAKE_SOURCE_DIR}/src

@@ -3,7 +3,15 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/usr/include",
+                "/usr/local/include",
+                "/usr/include/x86_64-linux-gnu/qt6/QtWidgets",
+                "/usr/include/x86_64-linux-gnu/qt6/QtGui",
+                "/usr/include/x86_64-linux-gnu/qt6/QtCore",
+                "/usr/include/x86_64-linux-gnu/qt6/QtOpenGLWidgets",
+                "/usr/include/x86_64-linux-gnu/qt6/QtOpenGL",
+                "/usr/include/x86_64-linux-gnu/qt6"
             ],
             "defines": [
                 "HG_ASSETS_PATH=\"${workspaceFolder}/assets/\"",

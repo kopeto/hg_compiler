@@ -63,6 +63,17 @@ struct Grid
     bool solve(const Dict& dict);
 
     /**
+     * Returns true if every FILLABLE cell has a letter (not '_').
+     */
+    bool isSolved() const;
+
+    /**
+     * Resets all FILLABLE cells to '_' and clears GridWord state,
+     * so the grid is ready for a fresh solve.
+     */
+    void reset();
+
+    /**
      * Fill the grid starting from a specific grid word, using a backtracking algorithm.
      * The algorithm works as follows:
      * 1. Get the current pattern of the grid word (the string formed by the cells in the grid word, where empty cells are represented by '_').

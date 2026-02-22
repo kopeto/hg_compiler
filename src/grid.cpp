@@ -213,6 +213,38 @@ void Grid::print() const
     }
 }
 
+bool Grid::isSolved() const
+{
+    for (const auto &row : _cells)
+        for (const auto &cell : row)
+            if (cell.type == Cell::CellType::FILLABLE && cell.value == '_')
+                return false;
+    return true;
+}
+
+void Grid::reset()
+{
+    // Reset every fillable cell to '_'
+    for (auto &row : _cells)
+        for (auto &cell : row)
+            if (cell.type == Cell::CellType::FILLABLE)
+                cell.value = '_';
+
+    // Reset GridWord internal state so the solver starts fresh
+    for (auto &word : _acrossWords)
+    {
+        word.setWord(std::string(word.length, '_'));
+        word.possible_words.clear();
+        word.unset();
+    }
+    for (auto &word : _downWords)
+    {
+        word.setWord(std::string(word.length, '_'));
+        word.possible_words.clear();
+        word.unset();
+    }
+}
+
 GridWord* Grid::getGridWordAt(unsigned int r, unsigned int c, GridWordDirection direction) const
 {
     // cast a unsigned int para evitar warning
