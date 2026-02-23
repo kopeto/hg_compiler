@@ -106,6 +106,7 @@ void MainWindow::setupCentralWidget()
 
     // ── Left: scroll area containing the grid ──
     _gridWidget = new GridWidget(this);
+    connect(_gridWidget, &GridWidget::gridModified, this, &MainWindow::onGridModified);
 
     auto* scroll = new QScrollArea(this);
     scroll->setWidget(_gridWidget);
@@ -290,6 +291,41 @@ void MainWindow::updateDictLabel()
         _dictLabel->setText(tr("📖 %1").arg(QFileInfo(_dictPath).fileName()));
     else
         _dictLabel->setText(tr("⚠️ No dictionary loaded"));
+}
+
+void MainWindow::onGridModified()
+{
+    if (!_gridWidget->editMode()) return;
+
+    // Snapshot the current UI layout → vector<string> of '.' and '#'
+    auto charLayout = _gridWidget->toCharGrid();
+    std::vector<std::string> lines;
+    lines.reserve(charLayout.size());
+    for (const auto& row : charLayout) {
+        std::string line;
+        line.reserve(row.size());
+        for (char c : row) line += (c == '#' ? '#' : '.');
+        lines.push_back(line);
+    }
+
+    try {
+        _crossword = std::make_unique<Crossword>(lines);
+        // Reload the grid widget from the freshly built domain Grid so cell
+        // pointers and GridWord metadata are perfectly in sync with the UI.
+        _gridWidget->loadFromGrid(_crossword->getGrid());
+        // Keep edit mode active after reload
+        _gridWidget->setEditMode(true);
+
+        const Grid& g = _crossword->getGrid();
+        statusBar()->showMessage(
+            tr("Grid updated — %1 across, %2 down")
+                .arg(g.getAcrossWords().size())
+                .arg(g.getDownWords().size()),
+            2000);
+    } catch (const std::exception& e) {
+        // Invalid layout (e.g. all white — no words): just report, don't crash
+        statusBar()->showMessage(tr("⚠️ %1").arg(QString::fromStdString(e.what())), 3000);
+    }
 }
 
 // ── Solver slots ─────────────────────────────────────────────

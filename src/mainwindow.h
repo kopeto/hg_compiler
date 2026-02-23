@@ -42,6 +42,9 @@ private slots:
     // Periodic UI refresh while solving
     void onRefreshTimer();
 
+    // Edit mode: cell toggled → rebuild domain Grid
+    void onGridModified();
+
 private:
     void setupMenuBar();
     void setupCentralWidget();

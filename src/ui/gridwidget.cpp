@@ -8,11 +8,16 @@ GridWidget::GridWidget(QWidget* parent) : QWidget(parent) {}
 
 void GridWidget::connectCell(CellWidget* cw, int r, int c)
 {
-    // Right-click: toggle black/white only in edit mode
+    // Right-click: toggle black/white only in edit mode.
+    // gridModified is emitted via a queued connection so the cell's
+    // mouse event fully unwinds before MainWindow rebuilds the grid
+    // (avoids use-after-free / segfault).
     connect(cw, &CellWidget::rightClicked, this, [this](CellWidget* cell) {
         if (!_editMode) return;
         cell->setBlack(!cell->isBlack());
-        emit gridModified();
+        QMetaObject::invokeMethod(this, [this]() {
+            emit gridModified();
+        }, Qt::QueuedConnection);
     });
     (void)r; (void)c; // reserved for future per-cell signals
 }
