@@ -51,9 +51,13 @@ private:
     void updateDictLabel();
     void updateEditModeIndicator();
     void updateSolverActions();
+    // Resize the window so it is never smaller than the grid + right panel,
+    // and center the grid inside its container area.
+    void adjustWindowForGrid();
 
     // ── UI ──
     GridWidget*  _gridWidget    = nullptr;
+    QWidget*     _gridArea      = nullptr;   // container that centres GridWidget
     QLabel*      _statusLabel   = nullptr;
     QLabel*      _dictLabel     = nullptr;
     QLabel*      _editModeLabel = nullptr;

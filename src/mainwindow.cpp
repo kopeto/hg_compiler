@@ -13,7 +13,6 @@
 #include <QMessageBox>
 #include <QStatusBar>
 #include <QFrame>
-#include <QScrollArea>
 
 #include "ui/newgriddialog.h"
 
@@ -109,7 +108,7 @@ void MainWindow::setupCentralWidget()
     mainLayout->setContentsMargins(8, 8, 8, 8);
     mainLayout->setSpacing(12);
 
-    // ── Left: scroll area containing the grid ──
+    // ── Left: container that centres the grid ──
     _gridWidget = new GridWidget(this);
     connect(_gridWidget, &GridWidget::gridModified,        this, &MainWindow::onGridModified);
     connect(_gridWidget, &GridWidget::cellFixed,           this, &MainWindow::onCellFixed);
@@ -119,11 +118,13 @@ void MainWindow::setupCentralWidget()
     connect(_gridWidget, &GridWidget::interactionRequested, this, &MainWindow::pauseSolver,
             Qt::DirectConnection);
 
-    auto* scroll = new QScrollArea(this);
-    scroll->setWidget(_gridWidget);
-    scroll->setWidgetResizable(false);
-    scroll->setFrameShape(QFrame::StyledPanel);
-    mainLayout->addWidget(scroll, /*stretch=*/3);
+    _gridArea = new QWidget(this);
+    _gridArea->setStyleSheet("background: #e8e8e8;");
+    auto* gridAreaLayout = new QHBoxLayout(_gridArea);
+    gridAreaLayout->setContentsMargins(8, 8, 8, 8);
+    gridAreaLayout->addWidget(_gridWidget, 0, Qt::AlignCenter);
+
+    mainLayout->addWidget(_gridArea, /*stretch=*/3);
 
     // ── Right panel ──
     auto* rightPanel = new QFrame(this);
@@ -174,6 +175,7 @@ void MainWindow::loadDefaultGrid()
         _currentGridPath = HG_DEFAULT_GRID_PATH;
         _crossword = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
+        adjustWindowForGrid();
         // Always start in edit mode
         _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("Default grid loaded."));
@@ -215,6 +217,7 @@ void MainWindow::onNewBlankGrid()
         _crossword       = std::make_unique<Crossword>(lines);
         _currentGridPath.clear();
         _gridWidget->loadFromGrid(_crossword->getGrid());
+        adjustWindowForGrid();
         _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("New %1×%2 grid created. Edit mode ON.")
                                  .arg(charLayout.size())
@@ -253,6 +256,7 @@ void MainWindow::onOpenGrid()
         _currentGridPath = path.toStdString();
         _crossword = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
+        adjustWindowForGrid();
         _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("Grid loaded: %1").arg(path));
     } catch (const std::exception& e) {
@@ -351,6 +355,7 @@ void MainWindow::onGridModified()
         try {
             _crossword = std::make_unique<Crossword>(lines);
             _gridWidget->loadFromGrid(_crossword->getGrid());
+            adjustWindowForGrid();
             _gridWidget->setEditMode(true);
 
             Grid& g = _crossword->getGrid();
@@ -380,6 +385,36 @@ void MainWindow::onGridModified()
 }
 
 // ── Solver slots ─────────────────────────────────────────────
+
+void MainWindow::adjustWindowForGrid()
+{
+    // Minimum size = grid pixels + margins + right panel + spacing
+    const int rightPanelMin = 200;
+    const int spacing       = 12;
+    const int margins       = 16; // 8px each side
+
+    int gridW = _gridWidget->width();
+    int gridH = _gridWidget->height();
+
+    // Extra space for the grid container padding (8px each side)
+    int areaW = gridW + 16;
+    int areaH = gridH + 16;
+
+    // Minimum window content size
+    int minW = areaW + spacing + rightPanelMin + margins;
+    int minH = areaH + margins;
+
+    // Account for menu bar and status bar heights
+    int extraH = menuBar()->sizeHint().height() + statusBar()->sizeHint().height();
+
+    setMinimumSize(minW, minH + extraH);
+
+    // Expand current size if it's smaller than the new minimum
+    int newW = qMax(width(),  minW);
+    int newH = qMax(height(), minH + extraH);
+    if (newW != width() || newH != height())
+        resize(newW, newH);
+}
 
 void MainWindow::updateSolverActions()
 {
