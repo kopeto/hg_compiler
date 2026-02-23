@@ -72,4 +72,6 @@ public:
     GridWord *vertical_word = nullptr;
     // The type of the cell (fillable or black)
     CellType type;
+    // When true, the solver will not overwrite this cell and reset() won't clear it
+    bool fixed = false;
 };

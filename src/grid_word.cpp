@@ -15,13 +15,15 @@ void GridWord::setWord(const std::string& str) {
         throw std::invalid_argument("String length must match the number of cells in the grid word");
     }
     
-    // Update the value of each cell in the grid word based on the provided string
+    // Update the value of each cell — skip fixed cells (user-locked letters)
     for (size_t i = 0; i < cells.size() && i < str.size(); ++i) {
-        cells[i]->value = str[i];
+        if (!cells[i]->fixed)
+            cells[i]->value = str[i];
     }
 
-    // Update the internal string representation of the grid word
-    _str = str;
+    // Re-read actual cell values into _str (fixed cells may differ from str)
+    for (size_t i = 0; i < cells.size(); ++i)
+        _str[i] = cells[i]->value;
 }
 
 const std::string& GridWord::getWord() {
@@ -50,4 +52,10 @@ void GridWord::unset() {
 
 bool GridWord::isSet() const {
     return _is_word_set;
+}
+
+bool GridWord::isFullyFixed() const {
+    for (const Cell* cell : cells)
+        if (!cell->fixed) return false;
+    return !cells.empty();
 }

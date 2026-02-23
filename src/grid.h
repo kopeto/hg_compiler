@@ -31,6 +31,9 @@ struct Grid
     int     getCols() const { return _cols; }
 
     void    setCell(int r, int c, int value);
+    void    fixCell(int r, int c, char letter);   // set letter + mark fixed
+    void    unfixCell(int r, int c);              // clear fixed flag
+    bool    isFixed(int r, int c) const;
     int     getValue(int r, int c) const;
     void    print() const;
 

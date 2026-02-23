@@ -45,6 +45,9 @@ private slots:
     // Edit mode: cell toggled → rebuild domain Grid
     void onGridModified();
 
+    // Letter written/erased in a cell → fix/unfix in domain Grid
+    void onCellFixed(int row, int col, char letter, bool fixed);
+
 private:
     void setupMenuBar();
     void setupCentralWidget();

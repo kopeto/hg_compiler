@@ -138,9 +138,29 @@ Grid &Grid::operator=(const Grid &other)
 void Grid::setCell(int r, int c, int value)
 {
     if (r >= 0 && r < _rows && c >= 0 && c < _cols)
-    {
         _cells[r][c] = value;
+}
+
+void Grid::fixCell(int r, int c, char letter)
+{
+    if (r >= 0 && r < _rows && c >= 0 && c < _cols
+        && _cells[r][c].type == Cell::CellType::FILLABLE) {
+        _cells[r][c].value = letter;
+        _cells[r][c].fixed = true;
     }
+}
+
+void Grid::unfixCell(int r, int c)
+{
+    if (r >= 0 && r < _rows && c >= 0 && c < _cols)
+        _cells[r][c].fixed = false;
+}
+
+bool Grid::isFixed(int r, int c) const
+{
+    if (r >= 0 && r < _rows && c >= 0 && c < _cols)
+        return _cells[r][c].fixed;
+    return false;
 }
 
 int Grid::getValue(int r, int c) const
@@ -176,24 +196,25 @@ bool Grid::isSolved() const
 
 void Grid::reset()
 {
-    // Reset every fillable cell to '_'
+    // Reset every fillable, non-fixed cell to '_'
     for (auto &row : _cells)
         for (auto &cell : row)
-            if (cell.type == Cell::CellType::FILLABLE)
+            if (cell.type == Cell::CellType::FILLABLE && !cell.fixed)
                 cell.value = '_';
 
-    // Reset GridWord internal state so the solver starts fresh
-    for (auto &word : _acrossWords)
-    {
-        word.setWord(std::string(word.length, '_'));
+    // Reset GridWord internal state so the solver starts fresh.
+    // Words that are already fully satisfied by fixed cells are left alone
+    // (the solver will detect them as already filled).
+    for (auto &word : _acrossWords) {
         word.possible_words.clear();
         word.unset();
+        // _str re-synced from cell values (fixed cells keep their letter)
+        word.getWord();
     }
-    for (auto &word : _downWords)
-    {
-        word.setWord(std::string(word.length, '_'));
+    for (auto &word : _downWords) {
         word.possible_words.clear();
         word.unset();
+        word.getWord();
     }
 }
 
@@ -224,28 +245,31 @@ GridWord* Grid::getGridWordAt(unsigned int r, unsigned int c, GridWordDirection 
 
 bool Grid::solve(const Dict &dict)
 {
-    /**
-     * We will track the grid words that we need to fill in a single vector, so that we can easily iterate through them and fill them one by one. We will start filling from the first grid word in the vector, and then we will move on to the next one until we have filled all the grid words or we have exhausted all the possibilities.
-     */
     std::vector<GridWord*> _to_fill;
-
-    // to keep track of the filled grid words, so that we can easily backtrack when we need to
     std::vector<GridWord*> _filled;
 
-    // fill the _to_fill vector with pointers to all the across and down words in the grid
     for (auto &word : _acrossWords)
-    {
         _to_fill.push_back(&word);
-    }
     for (auto &word : _downWords)
-    {
         _to_fill.push_back(&word);
+
+    // Words that are fully fixed by the user need no dictionary lookup —
+    // move them directly to _filled and mark them as set.
+    auto it = std::remove_if(_to_fill.begin(), _to_fill.end(), [](GridWord* w) {
+        return w->isFullyFixed();
+    });
+    for (auto jt = it; jt != _to_fill.end(); ++jt) {
+        (*jt)->set();
+        _filled.push_back(*jt);
+        Logger::debug("Skipping fully-fixed word at {},{} : {}",
+                      (*jt)->getPosition().first, (*jt)->getPosition().second,
+                      (*jt)->getWord());
     }
+    _to_fill.erase(it, _to_fill.end());
 
-    // get a grid word
+    if (_to_fill.empty()) return true; // everything was fixed by the user
+
     GridWord* firstWord = getNextGridWordToFill(_to_fill, _filled, dict);
-
-    // remove the current word from the _to_fill vector
     _to_fill.erase(std::remove(_to_fill.begin(), _to_fill.end(), firstWord), _to_fill.end());
 
     return solve(firstWord, _to_fill, _filled, dict);
@@ -254,150 +278,132 @@ bool Grid::solve(const Dict &dict)
 bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fill, std::vector<GridWord*>& _filled, const Dict &dict)
 {
     HG_PROFILE_SCOPE("Grid::solve");
-    // reshuffle the possible words to get a different solution each time
     static std::random_device rd;
     static std::mt19937 gen(rd());
 
-    // Implement the logic to fill the grid starting from a specific cell (r, c)
-    // This is a placeholder for the actual filling algorithm
+    // Snapshot of cell values BEFORE we touch anything — used for perfect backtrack
+    std::vector<char> cell_snapshot;
+    cell_snapshot.reserve(current_word_to_fill->cells.size());
+    for (Cell* cell : current_word_to_fill->cells)
+        cell_snapshot.push_back(cell->value);
 
-    // get the grid_word corresponding to the current cell (r, c) and try to fill it with a word from the dictionary:
+    // Read the actual pattern (fixed cells already have their letter)
     const std::string original_pattern = current_word_to_fill->getWord();
 
-    if(current_word_to_fill->possible_words.empty())
+    if (current_word_to_fill->possible_words.empty())
     {
         current_word_to_fill->possible_words = dict.getWordsByPattern(Pattern(original_pattern));
-        std::shuffle(current_word_to_fill->possible_words.begin(), current_word_to_fill->possible_words.end(), gen);
+        std::shuffle(current_word_to_fill->possible_words.begin(),
+                     current_word_to_fill->possible_words.end(), gen);
     }
     else
     {
         Pattern::FilterWordsByPattern(current_word_to_fill->possible_words, Pattern(original_pattern));
     }
 
-    // For each instance in the backtracking algorithm, we need to track the important cells (cells that cross with the current grid word). In this way, we can keep a track of interest cells and dont repeat words that fill the interest cells with the same pattern.
+    // Interest indexes: cells that cross with another word
     std::vector<int> interest_indexes;
-    std::set<std::string> tried_patterns_for_interest_cells; 
     for (size_t i = 0; i < current_word_to_fill->length; i++)
     {
         Cell* cell = current_word_to_fill->cells[i];
         if (cell->horizontal_word != nullptr && cell->vertical_word != nullptr)
-        {
             interest_indexes.push_back(i);
-        }
     }
 
-    /**
-     * Original_pattern, possible_words and reshuffling are used to implement a backtracking algorithm to fill the grid.
-     * In this instance of the algorithm, those 3 patterns are constant.
-     */
-
-    // add the current gridWord to the _filled vector, so that we can easily backtrack when we need to
     _filled.push_back(current_word_to_fill);
 
     const auto [r,c] = current_word_to_fill->getPosition();
-    Logger::debug("Filling word in position: {}, {} with pattern: {}", r, c, original_pattern);
+    Logger::debug("Filling word at {},{} pattern: {}", r, c, original_pattern);
 
-    // to keep track of the patterns we have already tried for the current gridWord, so that we don't try the same pattern again and again in case of infinite loops
     std::set<std::string> tried_patterns;
-
-    // lets account avoided words
     int avoided = 0;
 
-    // MArk word as set
     current_word_to_fill->set();
-
-    // crossing words:
     std::vector<GridWord*> crossing_words = getCrossingWords(current_word_to_fill);
+
+    // Helper: restore all cells to the snapshot (respects fixed cells)
+    auto restore_cells = [&]() {
+        for (size_t i = 0; i < current_word_to_fill->cells.size(); ++i)
+            if (!current_word_to_fill->cells[i]->fixed)
+                current_word_to_fill->cells[i]->value = cell_snapshot[i];
+        current_word_to_fill->getWord(); // re-sync _str
+    };
 
     for (const auto &word : current_word_to_fill->possible_words)
     {
-        // fill the gridWord with the current word
+        // Must agree with every fixed cell in this GridWord
+        bool conflicts_fixed = false;
+        for (size_t i = 0; i < current_word_to_fill->cells.size(); ++i) {
+            if (current_word_to_fill->cells[i]->fixed &&
+                current_word_to_fill->cells[i]->value != word->str[i]) {
+                conflicts_fixed = true;
+                break;
+            }
+        }
+        if (conflicts_fixed) { ++avoided; continue; }
+
         current_word_to_fill->setWord(word->str);
 
-        // get the patterns of the interest cells after filling the current gridWord, so that we can check if we have already tried this pattern for the current gridWord and avoid infinite loops
+        // Deduplicate by crossing-cell positions
         std::string pattern_for_interest_cells(current_word_to_fill->length, '_');
         for (int i : interest_indexes)
-        {
-            pattern_for_interest_cells[i] = word->str[i];
-        }
+            pattern_for_interest_cells[i] = current_word_to_fill->cells[i]->value;
 
-        // check if pattern is already tried
-        if (tried_patterns.count(pattern_for_interest_cells) > 0)
-        {
+        if (tried_patterns.count(pattern_for_interest_cells) > 0) {
             ++avoided;
-            continue; // skip this word and try the next one
+            restore_cells();
+            continue;
         }
-        else
-        {
-            tried_patterns.insert(pattern_for_interest_cells);
-        }
+        tried_patterns.insert(pattern_for_interest_cells);
 
-        /**
-         * For each crossing word, check this guess word permits to advance
-         */
+        // Forward-checking — skip fully-fixed crossing words: they're already satisfied
         bool can_advance = true;
         for (GridWord* crossing_word : crossing_words)
         {
-            if (dict.getWordsByPattern(crossing_word->getWord()).empty())
-            {
+            if (crossing_word->isFullyFixed()) continue;
+            if (dict.getWordsByPattern(crossing_word->getWord()).empty()) {
                 can_advance = false;
                 break;
             }
         }
-        if(!can_advance)
-        {
+        if (!can_advance) {
             ++avoided;
-            continue; // skip this word and try the next one
+            restore_cells();
+            continue;
         }
 
-        Logger::debug("Trying word: {} for grid word at position: {}, {}", word->str, r, c);
-        
-        // //Grid print
-        // Logger::info("===============================");
-        // Logger::info("Intermediate GRID");
-        // Logger::info("===============================");
-        // print();
+        Logger::debug("Trying word: {} at {},{}", word->str, r, c);
 
-        // get the next gridWord to fill:
-        GridWord* next_grid_word_to_fill = getNextGridWordToFill(_to_fill, _filled, dict);
+        while (true) {
+            GridWord* candidate = getNextGridWordToFill(_to_fill, _filled, dict);
+            if (candidate == nullptr)
+                return true; // grid complete
 
-        // End condition reached. GRID FILLED SUCCESSFULLY
-        if(next_grid_word_to_fill == nullptr)
-        {
-            // we have successfully filled the grid, so we can return true
-            return true; 
+            _to_fill.erase(std::remove(_to_fill.begin(), _to_fill.end(), candidate), _to_fill.end());
+
+            if (candidate->isFullyFixed()) {
+                candidate->set();
+                _filled.push_back(candidate);
+                continue;
+            }
+
+            if (solve(candidate, _to_fill, _filled, dict))
+                return true;
+
+            _to_fill.push_back(candidate);
+            break;
         }
 
-        // remove the next gridWord from the _to_fill vector, so that we don't try to fill it again in the next recursive call
-        _to_fill.erase(std::remove(_to_fill.begin(), _to_fill.end(), next_grid_word_to_fill), _to_fill.end());
-
-        if(solve(next_grid_word_to_fill, _to_fill, _filled, dict))
-        {
-            // we have successfully filled the grid, so we can return true
-            return true; 
-        }
-
-        // need to reinsert the next gridWord to fill in the _to_fill vector, so that we can try to fill it again with a different word in the next iteration of the loop
-        _to_fill.push_back(next_grid_word_to_fill);
+        restore_cells();
     }
 
-    // Logger::debug("Backtracking from position: {}, {} with pattern: {}. Avoided {} words.", r, c, original_pattern, avoided);
+    if (avoided > 0)
+        Logger::debug("Backtracking from {},{} pattern: {}. Avoided {}.", r, c, original_pattern, avoided);
 
-    /**
-     * Returning false here means that we have tried all possible words for the current gridWord and none of them fit, so we need to backtrack to the previous gridWord and try a different word for it. This is the essence of the backtracking algorithm.
-     *
-     * Need to restore the original pattern of the gridWord before backtracking, so that the previous gridWord can try a different word without being affected by the changes made by the current gridWord.
-     */
     _filled.pop_back();
-    current_word_to_fill->setWord(original_pattern);
+    restore_cells();
     current_word_to_fill->possible_words.clear();
     current_word_to_fill->unset();
-
-    // if avoided > 0, show as debug log:
-    if (avoided > 0)
-    {
-        Logger::debug("Backtracking from position: {}, {} with pattern: {}. Avoided {} words.", r, c, original_pattern, avoided);
-    }
 
     return false;
 }
@@ -479,6 +485,9 @@ GridWord* Grid::getNextGridWordToFill(const std::vector<GridWord*>& _to_fill, co
         if (!crosses) continue;
 
         // MRV: count how many words can still fit in this candidate
+        // Skip fully-fixed candidates — they're already satisfied, not a constraint
+        if (candidate->isFullyFixed()) continue;
+
         // The fewer options, the higher priority — fail early
         int count = dict.getWordsByPattern(candidate->getWord()).size();
 

@@ -107,6 +107,7 @@ void MainWindow::setupCentralWidget()
     // ── Left: scroll area containing the grid ──
     _gridWidget = new GridWidget(this);
     connect(_gridWidget, &GridWidget::gridModified, this, &MainWindow::onGridModified);
+    connect(_gridWidget, &GridWidget::cellFixed,    this, &MainWindow::onCellFixed);
 
     auto* scroll = new QScrollArea(this);
     scroll->setWidget(_gridWidget);
@@ -156,6 +157,16 @@ void MainWindow::loadDefaultGrid()
     } catch (const std::exception& e) {
         QMessageBox::warning(this, tr("Load error"), QString::fromStdString(e.what()));
     }
+}
+
+void MainWindow::onCellFixed(int row, int col, char letter, bool fixed)
+{
+    if (!_crossword) return;
+    Grid& g = _crossword->getGrid();
+    if (fixed)
+        g.fixCell(row, col, letter);
+    else
+        g.unfixCell(row, col);
 }
 
 // ── Grid slots ────────────────────────────────────────────────
@@ -297,7 +308,9 @@ void MainWindow::onGridModified()
 {
     if (!_gridWidget->editMode()) return;
 
-    // Snapshot the current UI layout → vector<string> of '.' and '#'
+    // Snapshot fixed cells BEFORE rebuilding (loadFromGrid resets everything)
+    auto fixed = _gridWidget->getFixedCells();
+
     auto charLayout = _gridWidget->toCharGrid();
     std::vector<std::string> lines;
     lines.reserve(charLayout.size());
@@ -310,20 +323,22 @@ void MainWindow::onGridModified()
 
     try {
         _crossword = std::make_unique<Crossword>(lines);
-        // Reload the grid widget from the freshly built domain Grid so cell
-        // pointers and GridWord metadata are perfectly in sync with the UI.
         _gridWidget->loadFromGrid(_crossword->getGrid());
-        // Keep edit mode active after reload
         _gridWidget->setEditMode(true);
 
-        const Grid& g = _crossword->getGrid();
+        // Restore fixed cells in both UI and domain Grid
+        Grid& g = _crossword->getGrid();
+        for (const auto& fc : fixed) {
+            _gridWidget->setCellFixed(fc.row, fc.col, fc.letter);
+            g.fixCell(fc.row, fc.col, fc.letter);
+        }
+
         statusBar()->showMessage(
             tr("Grid updated — %1 across, %2 down")
                 .arg(g.getAcrossWords().size())
                 .arg(g.getDownWords().size()),
             2000);
     } catch (const std::exception& e) {
-        // Invalid layout (e.g. all white — no words): just report, don't crash
         statusBar()->showMessage(tr("⚠️ %1").arg(QString::fromStdString(e.what())), 3000);
     }
 }

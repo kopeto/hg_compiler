@@ -42,6 +42,12 @@ struct GridWord {
      */
     bool isSet() const;
 
+    /**
+     * Returns true if every cell in this word is fixed by the user.
+     * Such words are skipped by the solver (no dictionary lookup needed).
+     */
+    bool isFullyFixed() const;
+
 public:
     std::vector<Cell*> cells{}; // Pointers to the cells that make up this grid word
     GridWordDirection direction;
