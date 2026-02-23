@@ -145,7 +145,7 @@ void Grid::fixCell(int r, int c, char letter)
 {
     if (r >= 0 && r < _rows && c >= 0 && c < _cols
         && _cells[r][c].type == Cell::CellType::FILLABLE) {
-        _cells[r][c].value = letter;
+        _cells[r][c].value = static_cast<char>(std::tolower((unsigned char)letter));
         _cells[r][c].fixed = true;
     }
 }
@@ -161,6 +161,14 @@ bool Grid::isFixed(int r, int c) const
     if (r >= 0 && r < _rows && c >= 0 && c < _cols)
         return _cells[r][c].fixed;
     return false;
+}
+
+bool Grid::cellHasWord(int r, int c) const
+{
+    if (r < 0 || r >= _rows || c < 0 || c >= _cols) return false;
+    const Cell& cell = _cells[r][c];
+    if (cell.type != Cell::CellType::FILLABLE) return false;
+    return cell.horizontal_word != nullptr || cell.vertical_word != nullptr;
 }
 
 int Grid::getValue(int r, int c) const
@@ -344,7 +352,8 @@ bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fil
         bool conflicts_fixed = false;
         for (size_t i = 0; i < current_word_to_fill->cells.size(); ++i) {
             if (current_word_to_fill->cells[i]->fixed &&
-                current_word_to_fill->cells[i]->value != word->str[i]) {
+                std::tolower((unsigned char)current_word_to_fill->cells[i]->value)
+                    != std::tolower((unsigned char)word->str[i])) {
                 conflicts_fixed = true;
                 break;
             }
@@ -383,24 +392,38 @@ bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fil
 
         Logger::debug("Trying word: {} at {},{}", word->str, r, c);
 
+        // Pick next word and recurse. Fully-fixed words in _to_fill are moved
+        // to _filled inline, but we must remember how many we pushed so we can
+        // pop them back on backtrack.
+        std::vector<GridWord*> inlined_fixed; // fully-fixed words consumed here
+
+        bool solved = false;
         while (true) {
             GridWord* candidate = getNextGridWordToFill(_to_fill, _filled, dict);
-            if (candidate == nullptr)
-                return true; // grid complete
+            if (candidate == nullptr) { solved = true; break; } // grid complete
 
             _to_fill.erase(std::remove(_to_fill.begin(), _to_fill.end(), candidate), _to_fill.end());
 
             if (candidate->isFullyFixed()) {
                 candidate->set();
                 _filled.push_back(candidate);
+                inlined_fixed.push_back(candidate);
                 continue;
             }
 
-            if (solve(candidate, _to_fill, _filled, dict, cancelFlag))
-                return true;
+            if (solve(candidate, _to_fill, _filled, dict, cancelFlag)) { solved = true; break; }
 
             _to_fill.push_back(candidate);
             break;
+        }
+
+        if (solved) return true;
+
+        // Backtrack: remove any fully-fixed words we inlined
+        for (GridWord* fw : inlined_fixed) {
+            fw->unset();
+            _filled.erase(std::remove(_filled.begin(), _filled.end(), fw), _filled.end());
+            _to_fill.push_back(fw);
         }
 
         restore_cells();

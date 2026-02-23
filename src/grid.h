@@ -38,6 +38,10 @@ struct Grid
     int     getValue(int r, int c) const;
     void    print() const;
 
+    // Returns true if (r,c) is fillable AND belongs to at least one GridWord
+    // (i.e. is part of a word of length >= 2).
+    bool    cellHasWord(int r, int c) const;
+
     GridWord* getGridWordAt(unsigned int r, unsigned int c, GridWordDirection direction) const;
 
     // Get all down/across words in the grid
