@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
 MainWindow::~MainWindow()
 {
-    stopSolver();
+    forceStopSolver();
 }
 
 // ── UI setup ─────────────────────────────────────────────────
@@ -88,13 +88,18 @@ void MainWindow::setupMenuBar()
     // ── Solver ──
     QMenu* solverMenu = menuBar()->addMenu(tr("&Solver"));
 
-    QAction* actSolve = solverMenu->addAction(tr("&Solve"));
-    actSolve->setShortcut(Qt::Key_F5);
-    connect(actSolve, &QAction::triggered, this, &MainWindow::onSolve);
+    _actSolve = solverMenu->addAction(tr("&Solve"));
+    _actSolve->setShortcut(Qt::Key_F5);
+    connect(_actSolve, &QAction::triggered, this, &MainWindow::onSolve);
 
-    QAction* actStop = solverMenu->addAction(tr("S&top"));
-    actStop->setShortcut(Qt::Key_Escape);
-    connect(actStop, &QAction::triggered, this, &MainWindow::onStopSolver);
+    _actStop = solverMenu->addAction(tr("&Pause (Esc)"));
+    _actStop->setShortcut(Qt::Key_Escape);
+    connect(_actStop, &QAction::triggered, this, &MainWindow::pauseSolver);
+
+    _actResume = solverMenu->addAction(tr("&Resume"));
+    _actResume->setShortcut(Qt::Key_F6);
+    _actResume->setEnabled(false);
+    connect(_actResume, &QAction::triggered, this, &MainWindow::onResumeSolver);
 }
 
 void MainWindow::setupCentralWidget()
@@ -106,8 +111,13 @@ void MainWindow::setupCentralWidget()
 
     // ── Left: scroll area containing the grid ──
     _gridWidget = new GridWidget(this);
-    connect(_gridWidget, &GridWidget::gridModified, this, &MainWindow::onGridModified);
-    connect(_gridWidget, &GridWidget::cellFixed,    this, &MainWindow::onCellFixed);
+    connect(_gridWidget, &GridWidget::gridModified,        this, &MainWindow::onGridModified);
+    connect(_gridWidget, &GridWidget::cellFixed,           this, &MainWindow::onCellFixed);
+    // interactionRequested: activate cancel flag immediately (non-blocking).
+    // The solver thread will finish on its own at the next recursive check.
+    // No wait() here — that would deadlock the UI thread.
+    connect(_gridWidget, &GridWidget::interactionRequested, this, &MainWindow::pauseSolver,
+            Qt::DirectConnection);
 
     auto* scroll = new QScrollArea(this);
     scroll->setWidget(_gridWidget);
@@ -115,7 +125,7 @@ void MainWindow::setupCentralWidget()
     scroll->setFrameShape(QFrame::StyledPanel);
     mainLayout->addWidget(scroll, /*stretch=*/3);
 
-    // ── Right: placeholder panel ──
+    // ── Right panel ──
     auto* rightPanel = new QFrame(this);
     rightPanel->setFrameShape(QFrame::StyledPanel);
     rightPanel->setMinimumWidth(200);
@@ -137,6 +147,17 @@ void MainWindow::setupCentralWidget()
     _statusLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     _statusLabel->setWordWrap(true);
     rightLayout->addWidget(_statusLabel);
+
+    // Resume button (visible only when paused mid-solve)
+    _resumeButton = new QPushButton(tr("▶  Resume (F6)"), rightPanel);
+    _resumeButton->setVisible(false);
+    _resumeButton->setStyleSheet(
+        "QPushButton { background:#2e7d32; color:white; font-weight:bold;"
+        " border-radius:4px; padding:6px; }"
+        "QPushButton:hover { background:#388e3c; }");
+    connect(_resumeButton, &QPushButton::clicked, this, &MainWindow::onResumeSolver);
+    rightLayout->addWidget(_resumeButton);
+
     rightLayout->addStretch();
 
     mainLayout->addWidget(rightPanel, /*stretch=*/1);
@@ -153,6 +174,8 @@ void MainWindow::loadDefaultGrid()
         _currentGridPath = HG_DEFAULT_GRID_PATH;
         _crossword = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
+        // Always start in edit mode
+        _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("Default grid loaded."));
     } catch (const std::exception& e) {
         QMessageBox::warning(this, tr("Load error"), QString::fromStdString(e.what()));
@@ -173,7 +196,7 @@ void MainWindow::onCellFixed(int row, int col, char letter, bool fixed)
 
 void MainWindow::onNewBlankGrid()
 {
-    stopSolver();
+    forceStopSolver();
     NewGridDialog dlg(this);
     if (dlg.exec() != QDialog::Accepted) return;
 
@@ -221,7 +244,7 @@ void MainWindow::updateEditModeIndicator()
 
 void MainWindow::onOpenGrid()
 {
-    stopSolver();
+    forceStopSolver();
     QString path = QFileDialog::getOpenFileName(
         this, tr("Open Grid"), QString(), tr("Grid files (*.grid);;All files (*)"));
     if (path.isEmpty()) return;
@@ -230,6 +253,7 @@ void MainWindow::onOpenGrid()
         _currentGridPath = path.toStdString();
         _crossword = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
+        _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("Grid loaded: %1").arg(path));
     } catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Load error"), QString::fromStdString(e.what()));
@@ -304,6 +328,7 @@ void MainWindow::updateDictLabel()
         _dictLabel->setText(tr("⚠️ No dictionary loaded"));
 }
 
+
 void MainWindow::onGridModified()
 {
     if (!_gridWidget->editMode()) return;
@@ -321,29 +346,58 @@ void MainWindow::onGridModified()
         lines.push_back(line);
     }
 
-    try {
-        _crossword = std::make_unique<Crossword>(lines);
-        _gridWidget->loadFromGrid(_crossword->getGrid());
-        _gridWidget->setEditMode(true);
+    // Capture by value so the lambda is safe to run after this function returns
+    auto rebuildCrossword = [this, lines, fixed]() {
+        try {
+            _crossword = std::make_unique<Crossword>(lines);
+            _gridWidget->loadFromGrid(_crossword->getGrid());
+            _gridWidget->setEditMode(true);
 
-        // Restore fixed cells in both UI and domain Grid
-        Grid& g = _crossword->getGrid();
-        for (const auto& fc : fixed) {
-            _gridWidget->setCellFixed(fc.row, fc.col, fc.letter);
-            g.fixCell(fc.row, fc.col, fc.letter);
+            Grid& g = _crossword->getGrid();
+            for (const auto& fc : fixed) {
+                _gridWidget->setCellFixed(fc.row, fc.col, fc.letter);
+                g.fixCell(fc.row, fc.col, fc.letter);
+            }
+
+            statusBar()->showMessage(
+                tr("Grid updated — %1 across, %2 down")
+                    .arg(g.getAcrossWords().size())
+                    .arg(g.getDownWords().size()),
+                2000);
+        } catch (const std::exception& e) {
+            statusBar()->showMessage(tr("⚠️ %1").arg(QString::fromStdString(e.what())), 3000);
         }
+    };
 
-        statusBar()->showMessage(
-            tr("Grid updated — %1 across, %2 down")
-                .arg(g.getAcrossWords().size())
-                .arg(g.getDownWords().size()),
-            2000);
-    } catch (const std::exception& e) {
-        statusBar()->showMessage(tr("⚠️ %1").arg(QString::fromStdString(e.what())), 3000);
+    if (_solving) {
+        // Queue the rebuild to run once the solver has stopped cleanly.
+        // pauseSolver() sets the cancel flag; onSolverFinished will call _pendingAfterStop.
+        _pendingAfterStop = rebuildCrossword;
+        pauseSolver();
+    } else {
+        rebuildCrossword();
     }
 }
 
 // ── Solver slots ─────────────────────────────────────────────
+
+void MainWindow::updateSolverActions()
+{
+    if (_actSolve)   _actSolve->setEnabled(!_solving);
+    if (_actStop)    _actStop->setEnabled(_solving);
+    if (_actResume)  _actResume->setEnabled(!_solving && _paused);
+    if (_resumeButton) _resumeButton->setVisible(!_solving && _paused);
+}
+
+void MainWindow::pauseSolver()
+{
+    if (!_solving) return;
+    _paused = true;
+    if (_solverWorker)
+        _solverWorker->requestCancel();
+    // Never wait() here — would deadlock the UI thread.
+    // The solver fires onSolverFinished via QueuedConnection when done.
+}
 
 void MainWindow::onSolve()
 {
@@ -352,20 +406,19 @@ void MainWindow::onSolve()
 
     Grid* grid = &_crossword->getGrid();
 
-    // ── Path 1: grid already solved → reset and start from scratch ──
     if (grid->isSolved()) {
         grid->reset();
-        _gridWidget->loadFromGrid(*grid);   // refresh UI to empty state
+        _gridWidget->loadFromGrid(*grid);
         statusBar()->showMessage(tr("Grid reset. Solving from scratch…"));
         _statusLabel->setText(tr("Solving from scratch…"));
-    }
-    // ── Path 2: intermediate state → continue from current state ──
-    else {
-        statusBar()->showMessage(tr("Continuing from current state…"));
-        _statusLabel->setText(tr("Continuing…"));
+    } else {
+        statusBar()->showMessage(tr("Solving…"));
+        _statusLabel->setText(tr("⏳ Solving…"));
     }
 
     _solving = true;
+    _paused  = false;
+    updateSolverActions();
 
     _solverThread = new QThread(this);
     _solverWorker = new SolverWorker(grid, _dict.get());
@@ -378,11 +431,21 @@ void MainWindow::onSolve()
     _solverThread->start();
 }
 
+void MainWindow::onResumeSolver()
+{
+    if (_solving || !_paused) return;
+    _paused = false;
+    onSolve();
+}
+
 void MainWindow::onStopSolver()
 {
-    stopSolver();
-    statusBar()->showMessage(tr("Solver stopped."));
-    _statusLabel->setText(tr("Solver stopped."));
+    if (!_solving) return;
+    _paused = false;
+    _pendingAfterStop = nullptr;
+    if (_solverWorker) _solverWorker->requestCancel();
+    updateSolverActions();
+    statusBar()->showMessage(tr("Solver stopping…"));
 }
 
 void MainWindow::onSolverFinished(bool success)
@@ -390,20 +453,45 @@ void MainWindow::onSolverFinished(bool success)
     _refreshTimer->stop();
     _solving = false;
 
-    // Final snapshot
-    onRefreshTimer();
+    // Thread has finished run() — safe to quit/wait now (returns immediately)
+    if (_solverThread) {
+        _solverThread->quit();
+        _solverThread->wait();
+        _solverThread->deleteLater(); _solverThread = nullptr;
+    }
+    if (_solverWorker) {
+        _solverWorker->deleteLater(); _solverWorker = nullptr;
+    }
 
-    _solverThread->quit();
-    _solverThread->wait();
-    _solverThread->deleteLater(); _solverThread = nullptr;
-    _solverWorker->deleteLater(); _solverWorker = nullptr;
+    // Run any deferred action (e.g. grid rebuild triggered during solve)
+    if (_pendingAfterStop) {
+        auto action = std::move(_pendingAfterStop);
+        _pendingAfterStop = nullptr;
+        action();
+        updateSolverActions();
+        return;
+    }
 
-    if (success) {
-        statusBar()->showMessage(tr("Solution found!"));
-        _statusLabel->setText(tr("✅ Solution found!"));
+    if (_paused) {
+        // Keep the UI exactly as it was when the solver stopped — don't refresh.
+        updateSolverActions();
+        statusBar()->showMessage(tr("Solver paused — press F6 or Resume to continue."));
+        _statusLabel->setText(tr("⏸ Paused"));
     } else {
-        statusBar()->showMessage(tr("No solution found."));
-        _statusLabel->setText(tr("❌ No solution found."));
+        // Final UI snapshot only when finishing naturally (not paused)
+        onRefreshTimer();
+
+        if (success) {
+            _paused = false;
+            updateSolverActions();
+            statusBar()->showMessage(tr("Solution found!"));
+            _statusLabel->setText(tr("✅ Solution found!"));
+        } else {
+            _paused = false;
+            updateSolverActions();
+            statusBar()->showMessage(tr("No solution found."));
+            _statusLabel->setText(tr("❌ No solution found."));
+        }
     }
 }
 
@@ -422,18 +510,21 @@ void MainWindow::onRefreshTimer()
     _gridWidget->applySnapshot(snap);
 }
 
-void MainWindow::stopSolver()
+void MainWindow::forceStopSolver()
 {
-    if (!_solving) return;
+    // Safe to block here: only called from destructor or before a new grid load,
+    // never from inside a Qt signal delivery.
     _refreshTimer->stop();
-    _solving = false;
+    if (_solverWorker) _solverWorker->requestCancel();
     if (_solverThread) {
-        _solverThread->requestInterruption();
         _solverThread->quit();
-        _solverThread->wait(3000);
+        _solverThread->wait();
         _solverThread->deleteLater(); _solverThread = nullptr;
     }
     if (_solverWorker) {
         _solverWorker->deleteLater(); _solverWorker = nullptr;
     }
+    _solving = false;
+    _pendingAfterStop = nullptr;
 }
+

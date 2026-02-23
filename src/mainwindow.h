@@ -2,9 +2,10 @@
 
 #include <QMainWindow>
 #include <QLabel>
+#include <QPushButton>
 #include <QTimer>
 #include <QThread>
-#include <QMutex>
+#include <functional>
 #include <memory>
 
 #include "crossword.h"
@@ -12,9 +13,6 @@
 #include "ui/gridwidget.h"
 #include "ui/solverworker.h"
 
-// ──────────────────────────────────────────────────────────────
-// Main application window
-// ──────────────────────────────────────────────────────────────
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -22,46 +20,48 @@ public:
     ~MainWindow();
 
 private slots:
-    // Menu → Grid
     void onNewBlankGrid();
     void onOpenGrid();
     void onSaveGrid();
     void onToggleEditMode(bool checked);
 
-    // Menu → Dictionary
     void onLoadDefaultDictionary();
     void onLoadCustomDictionary();
 
-    // Menu → Solver
     void onSolve();
     void onStopSolver();
+    void onResumeSolver();
 
-    // Solver callbacks
     void onSolverFinished(bool success);
-
-    // Periodic UI refresh while solving
     void onRefreshTimer();
-
-    // Edit mode: cell toggled → rebuild domain Grid
     void onGridModified();
-
-    // Letter written/erased in a cell → fix/unfix in domain Grid
     void onCellFixed(int row, int col, char letter, bool fixed);
+
+    // Activated by GridWidget::interactionRequested (DirectConnection).
+    // Sets cancel flag; queues a pending action to run once the solver stops.
+    void pauseSolver();
 
 private:
     void setupMenuBar();
     void setupCentralWidget();
     void loadDefaultGrid();
-    void stopSolver();
+    // Unconditionally kill the solver thread (safe to call from destructor /
+    // grid-load because those happen outside the Qt event loop delivery).
+    void forceStopSolver();
     void updateDictLabel();
     void updateEditModeIndicator();
+    void updateSolverActions();
 
     // ── UI ──
-    GridWidget* _gridWidget      = nullptr;
-    QLabel*     _statusLabel     = nullptr;
-    QLabel*     _dictLabel       = nullptr;
-    QLabel*     _editModeLabel   = nullptr;
-    QAction*    _actEditMode     = nullptr;
+    GridWidget*  _gridWidget    = nullptr;
+    QLabel*      _statusLabel   = nullptr;
+    QLabel*      _dictLabel     = nullptr;
+    QLabel*      _editModeLabel = nullptr;
+    QPushButton* _resumeButton  = nullptr;
+    QAction*     _actEditMode   = nullptr;
+    QAction*     _actSolve      = nullptr;
+    QAction*     _actStop       = nullptr;
+    QAction*     _actResume     = nullptr;
 
     // ── Domain ──
     std::unique_ptr<Crossword> _crossword;
@@ -75,4 +75,9 @@ private:
     QTimer*       _refreshTimer = nullptr;
 
     bool _solving = false;
+    bool _paused  = false;
+
+    // Action deferred until the solver thread has stopped.
+    // Set by pauseSolver(); executed at the top of onSolverFinished().
+    std::function<void()> _pendingAfterStop;
 };

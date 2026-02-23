@@ -119,16 +119,15 @@ void GridWidget::connectCell(CellWidget* cw, int r, int c)
     // Left-click: select cell / toggle direction
     connect(cw, &CellWidget::clicked, this, [this, r, c](CellWidget* cell) {
         if (cell->isBlack()) return;
+        emit interactionRequested();   // pause solver synchronously before touching anything
 
         if (_selRow == r && _selCol == c) {
-            // Same cell clicked again → toggle direction if both words exist
             GridWordDirection other = (_selDir == GridWordDirection::ACROSS)
                                       ? GridWordDirection::DOWN
                                       : GridWordDirection::ACROSS;
             if (hasWordInDir(r, c, other))
                 selectCell(r, c, other);
         } else {
-            // New cell → prefer ACROSS, fall back to DOWN
             GridWordDirection dir = hasWordInDir(r, c, GridWordDirection::ACROSS)
                                     ? GridWordDirection::ACROSS
                                     : GridWordDirection::DOWN;
@@ -138,6 +137,10 @@ void GridWidget::connectCell(CellWidget* cw, int r, int c)
 
     // Keyboard navigation (arrows, backspace-back, advance-after-letter)
     connect(cw, &CellWidget::keyNavigate, this, [this, r, c](CellWidget*, int key) {
+        // Only navigation keys that write data need to pause the solver
+        if (key != Qt::Key_Left && key != Qt::Key_Right &&
+            key != Qt::Key_Up   && key != Qt::Key_Down)
+            emit interactionRequested();
         onKeyNavigate(r, c, key);
     });
 
@@ -146,6 +149,7 @@ void GridWidget::connectCell(CellWidget* cw, int r, int c)
     //   - white cell  → toggle black
     connect(cw, &CellWidget::rightClicked, this, [this, r, c](CellWidget* cell) {
         if (!_editMode) return;
+        emit interactionRequested();   // pause solver before any modification
         if (!cell->isBlack() && cell->isFixed()) {
             cell->setFixed(false);
             cell->setLetter('_');
@@ -160,6 +164,7 @@ void GridWidget::connectCell(CellWidget* cw, int r, int c)
 
     // Key press: letter written/erased → emit cellFixed so domain Grid is updated
     connect(cw, &CellWidget::fixToggled, this, [this, r, c](CellWidget* cell) {
+        emit interactionRequested();   // pause solver before writing to the cell
         emit cellFixed(r, c, cell->letter(), cell->isFixed());
     });
 }

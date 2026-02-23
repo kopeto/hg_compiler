@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <atomic>
 
 #include "dict.h"
 #include "cell.h"
@@ -46,8 +47,9 @@ struct Grid
 
     /**
      * Fill the grid with words from the dictionary. This function will use a backtracking algorithm to fill the grid, starting from the first grid word and trying to fill it with a word from the dictionary that matches the current pattern of the grid word. If we successfully fill the grid, we return true. If we exhaust all possibilities and cannot fill the grid, we return false.
+     * cancelFlag: if set to true externally, the solver aborts immediately and returns false.
      */
-    bool solve(const Dict& dict);
+    bool solve(const Dict& dict, std::atomic<bool>* cancelFlag = nullptr);
 
     /**
      * Returns true if every FILLABLE cell has a letter (not '_').
@@ -71,7 +73,7 @@ struct Grid
      * 
      * It keeps track of the current state of the grid and the grid words that have been filled so far, so that it can easily backtrack when needed. The function returns true if the grid was successfully filled, and false if it was not possible to fill the grid with the given dictionary.
      */
-    bool solve( GridWord* grid_word,  std::vector<GridWord*>& _to_fill, std::vector<GridWord*>& _filled, const Dict& dict);
+    bool solve( GridWord* grid_word,  std::vector<GridWord*>& _to_fill, std::vector<GridWord*>& _filled, const Dict& dict, std::atomic<bool>* cancelFlag = nullptr);
 
     /**
      * Get a vector of current word's crossing words (words that intersect with it).

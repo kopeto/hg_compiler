@@ -58,6 +58,10 @@ signals:
     void cellFixed(int row, int col, char letter, bool fixed); // letter locked/unlocked
     // Emitted whenever the selected cell or direction changes
     void selectionChanged(int row, int col, GridWordDirection dir);
+    // Emitted BEFORE any action that could modify the grid or domain state.
+    // MainWindow connects this to pauseSolver() so the solver thread is stopped
+    // before the UI thread touches any shared data.
+    void interactionRequested();
 
 private:
     void buildLayout();

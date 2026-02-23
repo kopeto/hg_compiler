@@ -243,7 +243,7 @@ GridWord* Grid::getGridWordAt(unsigned int r, unsigned int c, GridWordDirection 
     return nullptr; // Should never reach here
 }
 
-bool Grid::solve(const Dict &dict)
+bool Grid::solve(const Dict &dict, std::atomic<bool>* cancelFlag)
 {
     std::vector<GridWord*> _to_fill;
     std::vector<GridWord*> _filled;
@@ -267,16 +267,19 @@ bool Grid::solve(const Dict &dict)
     }
     _to_fill.erase(it, _to_fill.end());
 
-    if (_to_fill.empty()) return true; // everything was fixed by the user
+    if (_to_fill.empty()) return true;
 
     GridWord* firstWord = getNextGridWordToFill(_to_fill, _filled, dict);
     _to_fill.erase(std::remove(_to_fill.begin(), _to_fill.end(), firstWord), _to_fill.end());
 
-    return solve(firstWord, _to_fill, _filled, dict);
+    return solve(firstWord, _to_fill, _filled, dict, cancelFlag);
 }
 
-bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fill, std::vector<GridWord*>& _filled, const Dict &dict)
+bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fill, std::vector<GridWord*>& _filled, const Dict &dict, std::atomic<bool>* cancelFlag)
 {
+    // Check cancellation at the start of every recursive call
+    if (cancelFlag && cancelFlag->load(std::memory_order_relaxed)) return false;
+
     HG_PROFILE_SCOPE("Grid::solve");
     static std::random_device rd;
     static std::mt19937 gen(rd());
@@ -331,6 +334,12 @@ bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fil
 
     for (const auto &word : current_word_to_fill->possible_words)
     {
+        // Check cancellation on every iteration — not just on recursive entry
+        if (cancelFlag && cancelFlag->load(std::memory_order_relaxed)) {
+            restore_cells();
+            return false;
+        }
+
         // Must agree with every fixed cell in this GridWord
         bool conflicts_fixed = false;
         for (size_t i = 0; i < current_word_to_fill->cells.size(); ++i) {
@@ -387,7 +396,7 @@ bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fil
                 continue;
             }
 
-            if (solve(candidate, _to_fill, _filled, dict))
+            if (solve(candidate, _to_fill, _filled, dict, cancelFlag))
                 return true;
 
             _to_fill.push_back(candidate);

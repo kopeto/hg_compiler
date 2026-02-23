@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QVector>
+#include <atomic>
 
 #include "grid.h"
 #include "dict.h"
@@ -16,14 +17,18 @@ class SolverWorker : public QObject {
 public:
     explicit SolverWorker(Grid* grid, const Dict* dict, QObject* parent = nullptr);
 
+    // Call this from any thread to ask the solver to abort.
+    // Grid::solve() checks this flag at each recursive call and returns false immediately.
+    void requestCancel() { _cancel.store(true, std::memory_order_relaxed); }
+
 signals:
-    // Emitted when the solver finishes (success=true means a solution was found)
     void finished(bool success);
 
 public slots:
     void run();
 
 private:
-    Grid*       _grid;
-    const Dict* _dict;
+    Grid*              _grid;
+    const Dict*        _dict;
+    std::atomic<bool>  _cancel{false};
 };
