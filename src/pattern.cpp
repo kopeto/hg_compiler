@@ -53,7 +53,7 @@ void Pattern::FilterWordsByPattern(std::vector<const Word*> &words, const Patter
         }
         for (std::size_t i = 0; i < pattern.size(); ++i)
         {
-            if (pattern.str[i] != '_' && std::toupper(word->str[i]) != pattern.str[i])
+            if (pattern.str[i] != '_' && pattern.str[i] != word->str[i])
             {
                 return true; // Remove words that don't match the pattern
             }

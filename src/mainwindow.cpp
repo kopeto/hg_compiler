@@ -233,12 +233,31 @@ void MainWindow::onCellFixed(int row, int col, char letter, bool fixed)
 {
     if (!_crossword) return;
     Grid& g = _crossword->getGrid();
-    if (fixed)
+    if (fixed) {
         g.fixCell(row, col, letter);
-    else
+    } else {
         g.unfixCell(row, col);
 
-    // Refresh the candidate list — fixed letters change the pattern
+        // Fix every non-empty non-fixed letter in the words crossing this cell
+        // so the solver treats them as hard constraints.
+        auto applyFix = [&](GridWord* gw) {
+            if (!gw) return;
+            auto [startR, startC] = gw->getPosition();
+            for (int i = 0; i < (int)gw->length; ++i) {
+                int r = (gw->direction == GridWordDirection::ACROSS) ? startR : startR + i;
+                int c = (gw->direction == GridWordDirection::ACROSS) ? startC + i : startC;
+                Cell* cell = gw->cells[i];
+                if (!cell->fixed && cell->value != '_') {
+                    g.fixCell(r, c, cell->value);
+                    _gridWidget->setCellFixed(r, c, cell->value);
+                }
+            }
+        };
+        try { applyFix(g.getGridWordAt(row, col, GridWordDirection::ACROSS)); } catch (...) {}
+        try { applyFix(g.getGridWordAt(row, col, GridWordDirection::DOWN));   } catch (...) {}
+    }
+
+    // Refresh the candidate list — letters changed
     updateWordList(_gridWidget->selectedRow(), _gridWidget->selectedCol(),
                    _gridWidget->selectedDir());
 }
@@ -264,13 +283,15 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir)
         return;
     }
 
-    // Build the pattern from the fixed state of each cell:
-    //   fixed cell  → its letter (hard constraint)
-    //   free cell   → '_' (wildcard)
+    // Build the pattern from ALL visible letters in the word:
+    //   any cell with a letter (fixed or not) → that letter (hard constraint)
+    //   empty cell ('_')                       → '_' (wildcard)
     std::string patStr;
     patStr.reserve(gw->length);
-    for (const Cell* cell : gw->cells)
-        patStr += (cell->fixed ? static_cast<char>(std::toupper((unsigned char)cell->value)) : '_');
+    for (const Cell* cell : gw->cells) {
+        char v = static_cast<char>(std::toupper((unsigned char)cell->value));
+        patStr += (v != '_') ? v : '_';
+    }
 
     Pattern pat(patStr);
     std::vector<const Word*> candidates = _dict->getWordsByPattern(pat);

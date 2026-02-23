@@ -21,6 +21,8 @@ Dict::Dict()
     std::string word;
     while (file >> word)
     {
+        std::transform(word.begin(), word.end(), word.begin(),
+                       [](unsigned char c){ return std::toupper(c); });
         _words.emplace_back(word);
     }
 
@@ -64,7 +66,11 @@ void Dict::load(const std::string& filename)
 
     std::string word;
     while (file >> word)
+    {
+        std::transform(word.begin(), word.end(), word.begin(),
+                       [](unsigned char c){ return std::toupper(c); });
         _words.emplace_back(word);
+    }
 
     for (const auto& w : _words)
     {
@@ -114,7 +120,7 @@ std::vector<const Word*> Dict::getWordsByPattern(const Pattern &pattern) const
         bool matches = true;
         for (std::size_t i = 0; i < patternLength; ++i)
         {
-            if (pattern.str[i] != '_' && std::tolower(pattern.str[i]) != std::tolower(word->str[i]))
+            if (pattern.str[i] != '_' && pattern.str[i] != word->str[i])
             {
                 matches = false;
                 break;

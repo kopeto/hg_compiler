@@ -145,17 +145,26 @@ void GridWidget::connectCell(CellWidget* cw, int r, int c)
     });
 
     // Right-click in edit mode:
-    //   - fixed cell  → unfix it and clear the letter
-    //   - white cell  → toggle black
+    // Right-click in edit mode:
+    //   - cell has a letter (fixed or solver-placed) → clear the letter
+    //   - cell is empty (blank white cell)           → toggle black
     connect(cw, &CellWidget::rightClicked, this, [this, r, c](CellWidget* cell) {
         if (!_editMode) return;
         emit interactionRequested();   // pause solver before any modification
-        if (!cell->isBlack() && cell->isFixed()) {
+        if (!cell->isBlack() && cell->letter() != '_') {
+            // Has a letter — just erase it (unfixing if needed)
             cell->setFixed(false);
             cell->setLetter('_');
             emit cellFixed(r, c, '_', false);
+        } else if (!cell->isBlack()) {
+            // Empty white cell → toggle black
+            cell->setBlack(true);
+            QMetaObject::invokeMethod(this, [this]() {
+                emit gridModified();
+            }, Qt::QueuedConnection);
         } else {
-            cell->setBlack(!cell->isBlack());
+            // Black cell → toggle back to white
+            cell->setBlack(false);
             QMetaObject::invokeMethod(this, [this]() {
                 emit gridModified();
             }, Qt::QueuedConnection);

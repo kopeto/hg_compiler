@@ -145,15 +145,18 @@ void Grid::fixCell(int r, int c, char letter)
 {
     if (r >= 0 && r < _rows && c >= 0 && c < _cols
         && _cells[r][c].type == Cell::CellType::FILLABLE) {
-        _cells[r][c].value = static_cast<char>(std::tolower((unsigned char)letter));
+        _cells[r][c].value = static_cast<char>(std::toupper((unsigned char)letter));
         _cells[r][c].fixed = true;
     }
 }
 
 void Grid::unfixCell(int r, int c)
 {
-    if (r >= 0 && r < _rows && c >= 0 && c < _cols)
+    if (r >= 0 && r < _rows && c >= 0 && c < _cols
+        && _cells[r][c].type == Cell::CellType::FILLABLE) {
         _cells[r][c].fixed = false;
+        _cells[r][c].value = '_';   // clear the letter too
+    }
 }
 
 bool Grid::isFixed(int r, int c) const
@@ -352,8 +355,7 @@ bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fil
         bool conflicts_fixed = false;
         for (size_t i = 0; i < current_word_to_fill->cells.size(); ++i) {
             if (current_word_to_fill->cells[i]->fixed &&
-                std::tolower((unsigned char)current_word_to_fill->cells[i]->value)
-                    != std::tolower((unsigned char)word->str[i])) {
+                current_word_to_fill->cells[i]->value != word->str[i]) {
                 conflicts_fixed = true;
                 break;
             }
