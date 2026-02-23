@@ -45,6 +45,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
 )
 
 # Compiler-specific warning flags
@@ -67,7 +68,7 @@ target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         HG_ENABLE_TIMERS=$<IF:$<BOOL:${ENABLE_TIMERS}>,1,0>
         HG_PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-        HG_DEFAULT_DICTIONARY_PATH="${CMAKE_SOURCE_DIR}/assets/words/garbi.txt"
+        HG_DEFAULT_DICTIONARY_PATH="${CMAKE_SOURCE_DIR}/assets/words/garbi_r_gabe.txt"
         HG_DEFAULT_GRID_PATH="${CMAKE_SOURCE_DIR}/assets/grids/basic_6x6.grid"
         HG_ENABLE_PROFILER=$<IF:$<BOOL:${ENABLE_PROFILER}>,1,0>
 )

@@ -29,6 +29,7 @@ struct Dict
     };
 
     Dict();
+    explicit Dict(const std::string& filepath);
     ~Dict();
 
     // load the dictionary from a file, where each line contains a single word

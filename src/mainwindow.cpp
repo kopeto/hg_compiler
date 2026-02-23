@@ -4,186 +4,16 @@
 #include <QFile>
 #include <QTextStream>
 #include <QFileDialog>
-#include <QGridLayout>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
 #include <QMessageBox>
-#include <QPainter>
-#include <QKeyEvent>
-#include <QMouseEvent>
 #include <QStatusBar>
-#include <QDockWidget>
 #include <QFrame>
-#include <QMutexLocker>
 #include <QScrollArea>
-
-// ═══════════════════════════════════════════════════════════════
-//  SolverWorker
-// ═══════════════════════════════════════════════════════════════
-
-SolverWorker::SolverWorker(Grid* grid, const Dict* dict, QObject* parent)
-    : QObject(parent), _grid(grid), _dict(dict) {}
-
-void SolverWorker::run()
-{
-    bool ok = _grid->solve(*_dict);
-    emit finished(ok);
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  CellWidget
-// ═══════════════════════════════════════════════════════════════
-
-CellWidget::CellWidget(bool isBlack, QWidget* parent)
-    : QWidget(parent), _isBlack(isBlack)
-{
-    setFixedSize(CELL_SIZE, CELL_SIZE);
-    setFocusPolicy(_isBlack ? Qt::NoFocus : Qt::StrongFocus);
-}
-
-void CellWidget::setLetter(char c)
-{
-    if (_isBlack) return;
-    _letter = (c == '.' || c == '\0') ? '_' : c;
-    update();
-}
-
-void CellWidget::setBlack(bool black)
-{
-    _isBlack = black;
-    _letter  = black ? '#' : '_';
-    setFocusPolicy(black ? Qt::NoFocus : Qt::StrongFocus);
-    update();
-}
-
-void CellWidget::paintEvent(QPaintEvent*)
-{
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing, false);
-
-    if (_isBlack) {
-        p.fillRect(rect(), Qt::black);
-    } else {
-        // White fill
-        p.fillRect(rect(), Qt::white);
-        // Border
-        p.setPen(QPen(QColor(80, 80, 80), 1));
-        p.drawRect(rect().adjusted(0, 0, -1, -1));
-
-        // Focus ring
-        if (hasFocus()) {
-            p.setPen(QPen(QColor(0, 120, 215), 2));
-            p.drawRect(rect().adjusted(1, 1, -2, -2));
-        }
-
-        // Letter
-        if (_letter != '_') {
-            QFont f = p.font();
-            f.setPixelSize(CELL_SIZE * 14 / 20);
-            f.setBold(true);
-            p.setFont(f);
-            p.setPen(Qt::black);
-            p.drawText(rect(), Qt::AlignCenter, QString(QChar(std::toupper(_letter))));
-        }
-    }
-}
-
-void CellWidget::mousePressEvent(QMouseEvent* event)
-{
-    if (event->button() == Qt::LeftButton) {
-        if (!_isBlack) setFocus();
-        emit clicked(this);
-    }
-    QWidget::mousePressEvent(event);
-}
-
-void CellWidget::keyPressEvent(QKeyEvent* event)
-{
-    if (_isBlack) { QWidget::keyPressEvent(event); return; }
-
-    int key = event->key();
-    if (key >= Qt::Key_A && key <= Qt::Key_Z) {
-        _letter = static_cast<char>('a' + (key - Qt::Key_A));
-        update();
-    } else if (key == Qt::Key_Backspace || key == Qt::Key_Delete || key == Qt::Key_Space) {
-        _letter = '_';
-        update();
-    } else {
-        QWidget::keyPressEvent(event);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  GridWidget
-// ═══════════════════════════════════════════════════════════════
-
-GridWidget::GridWidget(QWidget* parent) : QWidget(parent) {}
-
-void GridWidget::loadFromGrid(const Grid& grid)
-{
-    // Clear existing cells
-    for (auto& row : _cells)
-        for (auto* cell : row)
-            delete cell;
-    _cells.clear();
-
-    // Delete old layout if any
-    if (layout()) {
-        QLayoutItem* item;
-        while ((item = layout()->takeAt(0)) != nullptr) delete item;
-        delete layout();
-    }
-
-    _rows = grid.getRows();
-    _cols = grid.getCols();
-    _cells.resize(_rows, QVector<CellWidget*>(_cols, nullptr));
-
-    auto* gl = new QGridLayout(this);
-    gl->setSpacing(0);
-    gl->setContentsMargins(0, 0, 0, 0);
-
-    for (int r = 0; r < _rows; ++r) {
-        for (int c = 0; c < _cols; ++c) {
-            bool black = (grid.getValue(r, c) == '#');
-            auto* cw = new CellWidget(black, this);
-            if (!black) {
-                char v = static_cast<char>(grid.getValue(r, c));
-                if (v != '_' && v != '.') cw->setLetter(v);
-            }
-            connect(cw, &CellWidget::clicked, this, [this, cw](CellWidget*) {
-                // Toggle black on right-click is handled via mousePressEvent
-                Q_UNUSED(cw)
-            });
-            _cells[r][c] = cw;
-            gl->addWidget(cw, r, c);
-        }
-    }
-
-    setFixedSize(_cols * CellWidget::CELL_SIZE, _rows * CellWidget::CELL_SIZE);
-}
-
-void GridWidget::applySnapshot(const QVector<QVector<char>>& snapshot)
-{
-    for (int r = 0; r < _rows && r < snapshot.size(); ++r) {
-        for (int c = 0; c < _cols && c < snapshot[r].size(); ++c) {
-            if (!_cells[r][c]->isBlack()) {
-                _cells[r][c]->setLetter(snapshot[r][c]);
-            }
-        }
-    }
-}
-
-QVector<QVector<char>> GridWidget::toCharGrid() const
-{
-    QVector<QVector<char>> result(_rows, QVector<char>(_cols, '.'));
-    for (int r = 0; r < _rows; ++r)
-        for (int c = 0; c < _cols; ++c)
-            result[r][c] = _cells[r][c]->isBlack() ? '#' : _cells[r][c]->letter();
-    return result;
-}
 
 // ═══════════════════════════════════════════════════════════════
 //  MainWindow
@@ -191,10 +21,11 @@ QVector<QVector<char>> GridWidget::toCharGrid() const
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
-    setWindowTitle("Hitz Gurutzatuak Solver");
+    setWindowTitle("Hitz Gurutzatuak");
     resize(900, 620);
 
-    _dict = std::make_unique<Dict>();
+    _dict     = std::make_unique<Dict>();
+    _dictPath = HG_DEFAULT_DICTIONARY_PATH;
 
     _refreshTimer = new QTimer(this);
     _refreshTimer->setInterval(250); // 4 Hz
@@ -235,6 +66,15 @@ void MainWindow::setupMenuBar()
     actQuit->setShortcut(QKeySequence::Quit);
     connect(actQuit, &QAction::triggered, qApp, &QApplication::quit);
 
+    // ── Dictionary ──
+    QMenu* dictMenu = menuBar()->addMenu(tr("&Dictionary"));
+
+    QAction* actDefDict = dictMenu->addAction(tr("Load &Default Dictionary"));
+    connect(actDefDict, &QAction::triggered, this, &MainWindow::onLoadDefaultDictionary);
+
+    QAction* actCustDict = dictMenu->addAction(tr("Load &Custom Dictionary…"));
+    connect(actCustDict, &QAction::triggered, this, &MainWindow::onLoadCustomDictionary);
+
     // ── Solver ──
     QMenu* solverMenu = menuBar()->addMenu(tr("&Solver"));
 
@@ -269,6 +109,13 @@ void MainWindow::setupCentralWidget()
     rightPanel->setMinimumWidth(200);
 
     auto* rightLayout = new QVBoxLayout(rightPanel);
+
+    _dictLabel = new QLabel(this);
+    _dictLabel->setWordWrap(true);
+    _dictLabel->setStyleSheet("font-size: 11px; color: #555;");
+    rightLayout->addWidget(_dictLabel);
+    updateDictLabel();
+
     _statusLabel = new QLabel(tr("Ready"), rightPanel);
     _statusLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     _statusLabel->setWordWrap(true);
@@ -341,6 +188,51 @@ void MainWindow::onSaveGrid()
     statusBar()->showMessage(tr("Grid saved: %1").arg(path));
 }
 
+// ── Dictionary slots ─────────────────────────────────────────
+
+void MainWindow::onLoadDefaultDictionary()
+{
+    try {
+        _dictPath = HG_DEFAULT_DICTIONARY_PATH;
+        _dict     = std::make_unique<Dict>();
+        statusBar()->showMessage(tr("Default dictionary loaded."), 3000);
+    } catch (const std::exception& e) {
+        QMessageBox::critical(this, tr("Dictionary error"),
+                              tr("Cannot load dictionary:\n%1").arg(e.what()));
+        _dict = nullptr;
+    }
+    updateDictLabel();
+}
+
+void MainWindow::onLoadCustomDictionary()
+{
+    QString path = QFileDialog::getOpenFileName(
+        this, tr("Select Dictionary"), QString(),
+        tr("Text files (*.txt);;All files (*)"));
+    if (path.isEmpty()) return;
+
+    try {
+        _dictPath   = path;
+        _dict       = std::make_unique<Dict>();
+        _dict->load(path.toStdString());
+        statusBar()->showMessage(tr("Dictionary loaded: %1").arg(path), 3000);
+    } catch (const std::exception& e) {
+        QMessageBox::critical(this, tr("Dictionary error"),
+                              tr("Cannot load dictionary:\n%1").arg(e.what()));
+        _dict = nullptr;
+    }
+    updateDictLabel();
+}
+
+void MainWindow::updateDictLabel()
+{
+    if (!_dictLabel) return;
+    if (_dict)
+        _dictLabel->setText(tr("📖 %1").arg(QFileInfo(_dictPath).fileName()));
+    else
+        _dictLabel->setText(tr("⚠️ No dictionary loaded"));
+}
+
 // ── Solver slots ─────────────────────────────────────────────
 
 void MainWindow::onSolve()
@@ -350,17 +242,17 @@ void MainWindow::onSolve()
 
     Grid* grid = &_crossword->getGrid();
 
-    // ── Camino 1: grid ya resuelto → reset y empezar de nuevo ──
+    // ── Path 1: grid already solved → reset and start from scratch ──
     if (grid->isSolved()) {
         grid->reset();
-        _gridWidget->loadFromGrid(*grid);   // refresca la UI al estado vacío
-        statusBar()->showMessage(tr("Grid reseteado. Resolviendo desde cero…"));
-        _statusLabel->setText(tr("Resolviendo desde cero…"));
+        _gridWidget->loadFromGrid(*grid);   // refresh UI to empty state
+        statusBar()->showMessage(tr("Grid reset. Solving from scratch…"));
+        _statusLabel->setText(tr("Solving from scratch…"));
     }
-    // ── Camino 2: estado intermedio → continuar desde donde está ──
+    // ── Path 2: intermediate state → continue from current state ──
     else {
-        statusBar()->showMessage(tr("Continuando desde el estado actual…"));
-        _statusLabel->setText(tr("Continuando…"));
+        statusBar()->showMessage(tr("Continuing from current state…"));
+        _statusLabel->setText(tr("Continuing…"));
     }
 
     _solving = true;

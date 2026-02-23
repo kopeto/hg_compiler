@@ -401,10 +401,10 @@ bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fil
         Logger::debug("Trying word: {} for grid word at position: {}, {}", word->str, r, c);
         
         // //Grid print
-        Logger::info("===============================");
-        Logger::info("Intermediate GRID");
-        Logger::info("===============================");
-        print();
+        // Logger::info("===============================");
+        // Logger::info("Intermediate GRID");
+        // Logger::info("===============================");
+        // print();
 
         // get the next gridWord to fill:
         GridWord* next_grid_word_to_fill = getNextGridWordToFill(_to_fill, _filled, dict);

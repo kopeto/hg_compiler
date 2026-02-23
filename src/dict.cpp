@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 
 
 Dict::Dict()
@@ -45,6 +46,36 @@ Dict::Dict()
 }
 
 Dict::~Dict() = default;
+
+Dict::Dict(const std::string& filepath)
+{
+    load(filepath);
+}
+
+void Dict::load(const std::string& filename)
+{
+    std::ifstream file(filename);
+    if (!file.is_open())
+        throw std::runtime_error("Could not open dictionary file: " + filename);
+
+    _words.clear();
+    _wordsByLength.clear();
+    _wordsByLength.resize(100);
+
+    std::string word;
+    while (file >> word)
+        _words.emplace_back(word);
+
+    for (const auto& w : _words)
+    {
+        if (w.size() > 0 && w.size() <= _wordsByLength.size())
+            _wordsByLength[w.size() - 1].push_back(&w);
+    }
+
+    for (auto& vec : _wordsByLength)
+        std::sort(vec.begin(), vec.end(),
+                  [](const Word* a, const Word* b) { return a->str < b->str; });
+}
 
 std::vector<const Word*> Dict::getWordsOfLength(std::size_t length) const
 {
