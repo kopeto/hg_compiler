@@ -4,28 +4,51 @@
 
 GridWidget::GridWidget(QWidget* parent) : QWidget(parent) {}
 
-void GridWidget::loadFromGrid(const Grid& grid)
-{
-    // Clear existing cells
-    for (auto& row : _cells)
-        for (auto* cell : row)
-            delete cell;
-    _cells.clear();
+// ── helpers ───────────────────────────────────────────────────
 
-    // Delete old layout if any
+void GridWidget::connectCell(CellWidget* cw, int r, int c)
+{
+    // Right-click: toggle black/white only in edit mode
+    connect(cw, &CellWidget::rightClicked, this, [this](CellWidget* cell) {
+        if (!_editMode) return;
+        cell->setBlack(!cell->isBlack());
+        emit gridModified();
+    });
+    (void)r; (void)c; // reserved for future per-cell signals
+}
+
+void GridWidget::buildLayout()
+{
+    // Delete old layout
     if (layout()) {
         QLayoutItem* item;
         while ((item = layout()->takeAt(0)) != nullptr) delete item;
         delete layout();
     }
 
-    _rows = grid.getRows();
-    _cols = grid.getCols();
-    _cells.resize(_rows, QVector<CellWidget*>(_cols, nullptr));
-
     auto* gl = new QGridLayout(this);
     gl->setSpacing(0);
     gl->setContentsMargins(0, 0, 0, 0);
+
+    for (int r = 0; r < _rows; ++r)
+        for (int c = 0; c < _cols; ++c)
+            gl->addWidget(_cells[r][c], r, c);
+
+    setFixedSize(_cols * CellWidget::CELL_SIZE, _rows * CellWidget::CELL_SIZE);
+}
+
+// ── public API ────────────────────────────────────────────────
+
+void GridWidget::loadFromGrid(const Grid& grid)
+{
+    for (auto& row : _cells)
+        for (auto* cell : row)
+            delete cell;
+    _cells.clear();
+
+    _rows = grid.getRows();
+    _cols = grid.getCols();
+    _cells.resize(_rows, QVector<CellWidget*>(_cols, nullptr));
 
     for (int r = 0; r < _rows; ++r) {
         for (int c = 0; c < _cols; ++c) {
@@ -35,12 +58,45 @@ void GridWidget::loadFromGrid(const Grid& grid)
                 char v = static_cast<char>(grid.getValue(r, c));
                 if (v != '_' && v != '.') cw->setLetter(v);
             }
+            connectCell(cw, r, c);
             _cells[r][c] = cw;
-            gl->addWidget(cw, r, c);
         }
     }
 
-    setFixedSize(_cols * CellWidget::CELL_SIZE, _rows * CellWidget::CELL_SIZE);
+    buildLayout();
+}
+
+void GridWidget::loadBlank(int rows, int cols)
+{
+    for (auto& row : _cells)
+        for (auto* cell : row)
+            delete cell;
+    _cells.clear();
+
+    _rows = rows;
+    _cols = cols;
+    _cells.resize(_rows, QVector<CellWidget*>(_cols, nullptr));
+
+    for (int r = 0; r < _rows; ++r) {
+        for (int c = 0; c < _cols; ++c) {
+            auto* cw = new CellWidget(/*isBlack=*/false, this);
+            connectCell(cw, r, c);
+            _cells[r][c] = cw;
+        }
+    }
+
+    buildLayout();
+}
+
+void GridWidget::setEditMode(bool on)
+{
+    _editMode = on;
+}
+
+void GridWidget::setCellBlack(int row, int col, bool black)
+{
+    if (row >= 0 && row < _rows && col >= 0 && col < _cols)
+        _cells[row][col]->setBlack(black);
 }
 
 void GridWidget::applySnapshot(const QVector<QVector<char>>& snapshot)

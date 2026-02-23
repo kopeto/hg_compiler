@@ -1,14 +1,16 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
+#include <string>
 
 #include "grid.h"
 
 struct Crossword {
 
     Crossword();
-
     Crossword(const std::string& gridFilePath);
+    Crossword(const std::vector<std::string>& lines);
     
     void setCell(int x, int y, char value);
 

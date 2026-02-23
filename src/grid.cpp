@@ -10,163 +10,115 @@
 
 Grid::Grid(const std::string &filename)
 {
-    try
-    {
+    try {
         std::ifstream file(filename);
         if (!file.is_open())
-        {
             throw std::runtime_error("Could not open file: " + filename);
-        }
 
-        int cols = -1;
-
-        // Read the grid from the file
+        std::vector<std::string> lines;
         std::string line;
-
         while (std::getline(file, line))
-        {
-            // validate line length and characters
-            if (cols == -1)
-            {
-                cols = line.length();
-            }
-            else if (line.length() != static_cast<size_t>(cols))
-            {
-                throw std::runtime_error("Inconsistent line length in grid file");
-            }
+            lines.push_back(line);
 
-            std::vector<Cell> row;
-            for (char c : line)
-            {
-                if (c != '#' && c != '.')
-                {
-                    throw std::runtime_error("Invalid character in grid file: " + std::string(1, c));
-                }
-                row.emplace_back(c);
-            }
-            _cells.push_back(row);
-        }
-        _rows = _cells.size();
-        _cols = cols;
-
-        _acrossWords.reserve(_rows); // Worst case: every row is a single word
-        _downWords.reserve(_cols);   // Worst case: every column is a single word
-
-        // ACROSS words — only create GridWords, cell linking happens in pass 2
-        std::vector<Cell *> current_word_cells;
-        int current_word_start_c = -1;
-
-        for (int r = 0; r < _rows; r++)
-        {
-            for (int c = 0; c < _cols; c++)
-            {
-                if (_cells[r][c].type == Cell::CellType::FILLABLE)
-                {
-                    current_word_cells.push_back(&_cells[r][c]);
-                    if (current_word_start_c == -1)
-                    {
-                        current_word_start_c = c;
-                    }
-                }
-                else if (_cells[r][c].type == Cell::CellType::BLACK)
-                {
-                    // end of current word if any
-                    if (current_word_cells.size() >= 2)
-                    {
-                        // ✅ Only create the GridWord, no cell linking yet
-                        _acrossWords.emplace_back(GridWordDirection::ACROSS, r, current_word_start_c, current_word_cells.size());
-                    }
-                    // reset current word
-                    current_word_cells.clear();
-                    current_word_start_c = -1;
-                }
-            }
-            // end of current word if any
-            if (current_word_cells.size() >= 2)
-            {
-                // ✅ Only create the GridWord, no cell linking yet
-                _acrossWords.emplace_back(GridWordDirection::ACROSS, r, current_word_start_c, current_word_cells.size());
-            }
-            // reset current word
-            current_word_cells.clear();
-            current_word_start_c = -1;
-        }
-
-        // DOWN words — only create GridWords, cell linking happens in pass 2
-        int current_word_start_r = -1;
-        for (int c = 0; c < _cols; c++)
-        {
-            for (int r = 0; r < _rows; r++)
-            {
-                if (_cells[r][c].type == Cell::CellType::FILLABLE)
-                {
-                    current_word_cells.push_back(&_cells[r][c]);
-                    if (current_word_start_r == -1)
-                    {
-                        current_word_start_r = r;
-                    }
-                }
-                else if (_cells[r][c].type == Cell::CellType::BLACK)
-                {
-                    // end of current word if any
-                    if (current_word_cells.size() >= 2)
-                    {
-                        // ✅ Only create the GridWord, no cell linking yet
-                        _downWords.emplace_back(GridWordDirection::DOWN, current_word_start_r, c, current_word_cells.size());
-                    }
-                    // reset current word
-                    current_word_cells.clear();
-                    current_word_start_r = -1;
-                }
-            }
-            // end of current word if any
-            if (current_word_cells.size() >= 2)
-            {
-                // ✅ Only create the GridWord, no cell linking yet
-                _downWords.emplace_back(GridWordDirection::DOWN, current_word_start_r, c, current_word_cells.size());
-            }
-            // reset current word
-            current_word_cells.clear();
-            current_word_start_r = -1;
-        }
-
-        // PASS 2: link cells to GridWords
-        // _acrossWords and _downWords are fully built and will NOT reallocate anymore,
-        // so pointers to their elements are stable from this point on.
-        for (auto &word : _acrossWords)
-        {
-            auto [row, col] = word.getPosition();
-            for (size_t i = 0; i < word.length; i++)
-            {
-                Cell* cell = &_cells[row][col + i];
-                cell->horizontal_word = &word; // ✅ Cell knows its horizontal word
-                word.addCell(cell);            // ✅ Word knows its cells
-            }
-        }
-
-        for (auto &word : _downWords)
-        {
-            auto [row, col] = word.getPosition();
-            for (size_t i = 0; i < word.length; i++)
-            {
-                Cell* cell = &_cells[row + i][col];
-                cell->vertical_word = &word;   // ✅ Cell knows its vertical word
-                word.addCell(cell);            // ✅ Word knows its cells
-            }
-        }
-
-        // Debug print
-        Logger::debug("Grid loaded successfully from file: {}", filename);
-        Logger::debug("Rows: {}, Cols: {}", _rows, _cols);
-        Logger::debug("Across words: {}", _acrossWords.size());
-        Logger::debug("Down words: {}", _downWords.size());
-
+        initFromLines(lines);
+        Logger::debug("Grid loaded from file: {}", filename);
     }
-    catch (const std::exception &e)
-    {
+    catch (const std::exception& e) {
         std::cerr << "Error loading grid: " << e.what() << std::endl;
-        throw; // Rethrow the exception after logging
+        throw;
     }
+}
+
+Grid::Grid(const std::vector<std::string>& lines)
+{
+    initFromLines(lines);
+}
+
+void Grid::initFromLines(const std::vector<std::string>& lines)
+{
+    if (lines.empty())
+        throw std::runtime_error("Grid has no lines");
+
+    int cols = static_cast<int>(lines[0].size());
+    for (const auto& line : lines) {
+        if (static_cast<int>(line.size()) != cols)
+            throw std::runtime_error("Inconsistent line length in grid");
+
+        std::vector<Cell> row;
+        for (char c : line) {
+            if (c != '#' && c != '.')
+                throw std::runtime_error("Invalid character in grid: " + std::string(1, c));
+            row.emplace_back(c);
+        }
+        _cells.push_back(row);
+    }
+    _rows = static_cast<int>(_cells.size());
+    _cols = cols;
+
+    _acrossWords.reserve(_rows);
+    _downWords.reserve(_cols);
+
+    // ACROSS words — pass 1: only create GridWords
+    std::vector<Cell*> current_word_cells;
+    int current_word_start_c = -1;
+
+    for (int r = 0; r < _rows; r++) {
+        for (int c = 0; c < _cols; c++) {
+            if (_cells[r][c].type == Cell::CellType::FILLABLE) {
+                current_word_cells.push_back(&_cells[r][c]);
+                if (current_word_start_c == -1) current_word_start_c = c;
+            } else if (_cells[r][c].type == Cell::CellType::BLACK) {
+                if (current_word_cells.size() >= 2)
+                    _acrossWords.emplace_back(GridWordDirection::ACROSS, r, current_word_start_c, current_word_cells.size());
+                current_word_cells.clear();
+                current_word_start_c = -1;
+            }
+        }
+        if (current_word_cells.size() >= 2)
+            _acrossWords.emplace_back(GridWordDirection::ACROSS, r, current_word_start_c, current_word_cells.size());
+        current_word_cells.clear();
+        current_word_start_c = -1;
+    }
+
+    // DOWN words — pass 1
+    int current_word_start_r = -1;
+    for (int c = 0; c < _cols; c++) {
+        for (int r = 0; r < _rows; r++) {
+            if (_cells[r][c].type == Cell::CellType::FILLABLE) {
+                current_word_cells.push_back(&_cells[r][c]);
+                if (current_word_start_r == -1) current_word_start_r = r;
+            } else if (_cells[r][c].type == Cell::CellType::BLACK) {
+                if (current_word_cells.size() >= 2)
+                    _downWords.emplace_back(GridWordDirection::DOWN, current_word_start_r, c, current_word_cells.size());
+                current_word_cells.clear();
+                current_word_start_r = -1;
+            }
+        }
+        if (current_word_cells.size() >= 2)
+            _downWords.emplace_back(GridWordDirection::DOWN, current_word_start_r, c, current_word_cells.size());
+        current_word_cells.clear();
+        current_word_start_r = -1;
+    }
+
+    // PASS 2: link cells to GridWords (vectors are stable now)
+    for (auto& word : _acrossWords) {
+        auto [row, col] = word.getPosition();
+        for (size_t i = 0; i < word.length; i++) {
+            Cell* cell = &_cells[row][col + i];
+            cell->horizontal_word = &word;
+            word.addCell(cell);
+        }
+    }
+    for (auto& word : _downWords) {
+        auto [row, col] = word.getPosition();
+        for (size_t i = 0; i < word.length; i++) {
+            Cell* cell = &_cells[row + i][col];
+            cell->vertical_word = &word;
+            word.addCell(cell);
+        }
+    }
+
+    Logger::debug("Grid built: {}x{}, {} across, {} down", _rows, _cols, _acrossWords.size(), _downWords.size());
 }
 
 Grid::~Grid() {}

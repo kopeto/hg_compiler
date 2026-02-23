@@ -14,6 +14,12 @@ Crossword::Crossword(const std::string& gridFilePath) : _grid(gridFilePath)
     _height = _grid.getRows();
 }
 
+Crossword::Crossword(const std::vector<std::string>& lines) : _grid(lines)
+{
+    _width = _grid.getCols();
+    _height = _grid.getRows();
+}
+
 void Crossword::setCell(int x, int y, char value)
 {
     if (x >= 0 && x < _width && y >= 0 && y < _height)

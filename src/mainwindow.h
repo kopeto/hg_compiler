@@ -22,10 +22,11 @@ public:
     ~MainWindow();
 
 private slots:
-    // Menu → File
-    void onNewGrid();
+    // Menu → Grid
+    void onNewBlankGrid();
     void onOpenGrid();
     void onSaveGrid();
+    void onToggleEditMode(bool checked);
 
     // Menu → Dictionary
     void onLoadDefaultDictionary();
@@ -47,11 +48,14 @@ private:
     void loadDefaultGrid();
     void stopSolver();
     void updateDictLabel();
+    void updateEditModeIndicator();
 
     // ── UI ──
-    GridWidget* _gridWidget  = nullptr;
-    QLabel*     _statusLabel = nullptr;
-    QLabel*     _dictLabel   = nullptr;
+    GridWidget* _gridWidget      = nullptr;
+    QLabel*     _statusLabel     = nullptr;
+    QLabel*     _dictLabel       = nullptr;
+    QLabel*     _editModeLabel   = nullptr;
+    QAction*    _actEditMode     = nullptr;
 
     // ── Domain ──
     std::unique_ptr<Crossword> _crossword;

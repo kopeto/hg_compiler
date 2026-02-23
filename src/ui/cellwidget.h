@@ -20,7 +20,8 @@ public:
     static constexpr int CELL_SIZE = 36;
 
 signals:
-    void clicked(CellWidget* cell);
+    void clicked(CellWidget* cell);        // left-click
+    void rightClicked(CellWidget* cell);   // right-click (edit mode: toggle black)
 
 protected:
     void paintEvent(QPaintEvent* event) override;

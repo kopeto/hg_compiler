@@ -63,6 +63,8 @@ void CellWidget::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton) {
         if (!_isBlack) setFocus();
         emit clicked(this);
+    } else if (event->button() == Qt::RightButton) {
+        emit rightClicked(this);
     }
     QWidget::mousePressEvent(event);
 }

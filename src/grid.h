@@ -21,24 +21,8 @@ struct Grid
     static bool crossing(const GridWord* word1, const GridWord* word2);
 
     Grid() = delete;
-    /**
-     * In the Grid constructor we read the grid from a file, and we also identify 
-     * the across and down words in the grid and  store them in the 
-     * _acrossWords and _downWords vectors.
-     * Each GridWord contains pointers to the cells that make up the word, 
-     * so we can easily access and modify the cells when filling the grid.
-     * The logic to identify the across and down words is as follows:
-     * - For across words: We iterate through each row of the grid, and 
-     * whenever we encounter a fillable cell, we start a new GridWord 
-     * and keep adding cells to it until we encounter a black cell or 
-     * the end of the row. Once we have identified an across word, 
-     * we add it to the _acrossWords vector.
-     * - For down words: We iterate through each column of the grid, 
-     * and whenever we encounter a fillable cell, we start a new GridWord 
-     * and keep adding cells to it until we encounter a black cell or 
-     * the end of the column. Once we have identified a down word, we add it to the _downWords vector.
-     */
-    Grid(const std::string& filename = HG_DEFAULT_GRID_PATH);
+    Grid(const std::string& filename);
+    Grid(const std::vector<std::string>& lines);  // construct from in-memory lines
     ~Grid();
     Grid(const Grid& other);
     Grid& operator=(const Grid& other);
@@ -93,6 +77,8 @@ struct Grid
 
 
 private:
+    void initFromLines(const std::vector<std::string>& lines);
+
     int _rows;
     int _cols;
     std::vector<std::vector<Cell>> _cells;

@@ -15,6 +15,8 @@
 #include <QFrame>
 #include <QScrollArea>
 
+#include "ui/newgriddialog.h"
+
 // ═══════════════════════════════════════════════════════════════
 //  MainWindow
 // ═══════════════════════════════════════════════════════════════
@@ -48,23 +50,31 @@ void MainWindow::setupMenuBar()
     // ── File ──
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
 
-    QAction* actNew = fileMenu->addAction(tr("&New Grid"));
-    actNew->setShortcut(QKeySequence::New);
-    connect(actNew, &QAction::triggered, this, &MainWindow::onNewGrid);
-
-    QAction* actOpen = fileMenu->addAction(tr("&Open Grid…"));
-    actOpen->setShortcut(QKeySequence::Open);
-    connect(actOpen, &QAction::triggered, this, &MainWindow::onOpenGrid);
-
-    QAction* actSave = fileMenu->addAction(tr("&Save Grid…"));
-    actSave->setShortcut(QKeySequence::Save);
-    connect(actSave, &QAction::triggered, this, &MainWindow::onSaveGrid);
-
-    fileMenu->addSeparator();
-
     QAction* actQuit = fileMenu->addAction(tr("&Quit"));
     actQuit->setShortcut(QKeySequence::Quit);
     connect(actQuit, &QAction::triggered, qApp, &QApplication::quit);
+
+    // ── Grid ──
+    QMenu* gridMenu = menuBar()->addMenu(tr("&Grid"));
+
+    QAction* actNewBlank = gridMenu->addAction(tr("&New Blank Grid…"));
+    actNewBlank->setShortcut(QKeySequence::New);
+    connect(actNewBlank, &QAction::triggered, this, &MainWindow::onNewBlankGrid);
+
+    QAction* actOpen = gridMenu->addAction(tr("&Open Grid…"));
+    actOpen->setShortcut(QKeySequence::Open);
+    connect(actOpen, &QAction::triggered, this, &MainWindow::onOpenGrid);
+
+    QAction* actSave = gridMenu->addAction(tr("&Save Grid…"));
+    actSave->setShortcut(QKeySequence::Save);
+    connect(actSave, &QAction::triggered, this, &MainWindow::onSaveGrid);
+
+    gridMenu->addSeparator();
+
+    _actEditMode = gridMenu->addAction(tr("&Edit Mode (toggle black cells)"));
+    _actEditMode->setCheckable(true);
+    _actEditMode->setShortcut(Qt::Key_F2);
+    connect(_actEditMode, &QAction::toggled, this, &MainWindow::onToggleEditMode);
 
     // ── Dictionary ──
     QMenu* dictMenu = menuBar()->addMenu(tr("&Dictionary"));
@@ -116,6 +126,11 @@ void MainWindow::setupCentralWidget()
     rightLayout->addWidget(_dictLabel);
     updateDictLabel();
 
+    _editModeLabel = new QLabel(this);
+    _editModeLabel->setStyleSheet("font-size: 11px;");
+    rightLayout->addWidget(_editModeLabel);
+    updateEditModeIndicator();
+
     _statusLabel = new QLabel(tr("Ready"), rightPanel);
     _statusLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     _statusLabel->setWordWrap(true);
@@ -142,13 +157,54 @@ void MainWindow::loadDefaultGrid()
     }
 }
 
-// ── File slots ────────────────────────────────────────────────
+// ── Grid slots ────────────────────────────────────────────────
 
-void MainWindow::onNewGrid()
+void MainWindow::onNewBlankGrid()
 {
     stopSolver();
-    // For now just reload the default; a dialog to pick dimensions could be added later
-    loadDefaultGrid();
+    NewGridDialog dlg(this);
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    // Convert the dialog's char layout → vector<string> for Grid constructor
+    auto charLayout = dlg.layout();
+    std::vector<std::string> lines;
+    lines.reserve(charLayout.size());
+    for (const auto& row : charLayout) {
+        std::string line;
+        line.reserve(row.size());
+        for (char c : row) line += (c == '#' ? '#' : '.');
+        lines.push_back(line);
+    }
+
+    try {
+        _crossword       = std::make_unique<Crossword>(lines);
+        _currentGridPath.clear();
+        _gridWidget->loadFromGrid(_crossword->getGrid());
+        _actEditMode->setChecked(true);
+        statusBar()->showMessage(tr("New %1×%2 grid created. Edit mode ON.")
+                                 .arg(charLayout.size())
+                                 .arg(charLayout.isEmpty() ? 0 : charLayout[0].size()));
+    } catch (const std::exception& e) {
+        QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));
+    }
+}
+
+void MainWindow::onToggleEditMode(bool checked)
+{
+    _gridWidget->setEditMode(checked);
+    updateEditModeIndicator();
+    statusBar()->showMessage(checked
+        ? tr("Edit mode ON — right-click a cell to toggle black/white")
+        : tr("Edit mode OFF"), 3000);
+}
+
+void MainWindow::updateEditModeIndicator()
+{
+    if (!_editModeLabel) return;
+    if (_gridWidget && _gridWidget->editMode())
+        _editModeLabel->setText(tr("✏️ Edit mode ON"));
+    else
+        _editModeLabel->setText(tr("🔒 Edit mode OFF"));
 }
 
 void MainWindow::onOpenGrid()
@@ -180,9 +236,12 @@ void MainWindow::onSaveGrid()
         return;
     }
     QTextStream out(&f);
+
+    // Save the current black/white layout (letters become '.' — grid format only
+    // encodes structure, not solution)
     auto grid = _gridWidget->toCharGrid();
     for (const auto& row : grid) {
-        for (char c : row) out << QChar(c == '_' ? '.' : c);
+        for (char c : row) out << QChar(c == '#' ? '#' : '.');
         out << '\n';
     }
     statusBar()->showMessage(tr("Grid saved: %1").arg(path));
