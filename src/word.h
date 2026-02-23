@@ -5,7 +5,7 @@
 struct Word
 {
     Word() = default;
-    Word(const std::string &s) : str(s), _size(str.size()) {}
+    Word(const std::string &s, int score = 0) : str(s), score(score), _size(str.size()) {}
 
     bool operator==(const Word &other) const
     {
@@ -19,6 +19,7 @@ struct Word
 
 public:
     std::string str{""};
+    int score = 0;
 
 private:
     std::size_t _size = 0;

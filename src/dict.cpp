@@ -6,6 +6,46 @@
 #include <iostream>
 #include <stdexcept>
 
+// ── helpers ───────────────────────────────────────────────────
+
+// Parse one line from a dictionary file.
+// Supported formats:
+//   "WORD"         → plain word  (score = 0)
+//   "WORD;SCORE"   → word with numeric score
+// Returns {uppercased_word, score}, or {"", 0} if the line should be skipped.
+static std::pair<std::string, int> parseDictLine(const std::string& line)
+{
+    if (line.empty()) return {};
+
+    auto sep = line.find(';');
+
+    // Word part: everything before ';'
+    std::string word = line.substr(0, sep);
+
+    // Score part: everything after ';', if present
+    int score = 0;
+    if (sep != std::string::npos)
+    {
+        try { score = std::stoi(line.substr(sep + 1)); }
+        catch (...) { score = 0; }
+    }
+
+    // Trim trailing whitespace/CR from word
+    while (!word.empty() && (word.back() == ' ' || word.back() == '\r' || word.back() == '\n'))
+        word.pop_back();
+
+    if (word.empty()) return {};
+
+    // Validate: only alpha characters allowed
+    for (unsigned char c : word)
+        if (!std::isalpha(c)) return {};
+
+    std::transform(word.begin(), word.end(), word.begin(),
+                   [](unsigned char c){ return std::toupper(c); });
+    return {word, score};
+}
+
+// ── Dict ──────────────────────────────────────────────────────
 
 Dict::Dict()
 {
@@ -16,14 +56,14 @@ Dict::Dict()
         return;
     }
 
-    _wordsByLength.resize(100); // Arbitrary max length
+    _wordsByLength.resize(100);
 
-    std::string word;
-    while (file >> word)
+    std::string line;
+    while (std::getline(file, line))
     {
-        std::transform(word.begin(), word.end(), word.begin(),
-                       [](unsigned char c){ return std::toupper(c); });
-        _words.emplace_back(word);
+        auto [word, score] = parseDictLine(line);
+        if (!word.empty())
+            _words.emplace_back(word, score);
     }
 
     for (const auto &word : _words)
@@ -39,12 +79,6 @@ Dict::Dict()
         std::sort(vec.begin(), vec.end(), [](const Word* a, const Word* b)
                   { return a->str < b->str; });
     }
-
-    file.close();
-
-    // Build the indexed words for pattern-based retrieval
-    // TODO:
-    // _indexedWords.buildIndex(*this);
 }
 
 Dict::~Dict() = default;
@@ -64,12 +98,12 @@ void Dict::load(const std::string& filename)
     _wordsByLength.clear();
     _wordsByLength.resize(100);
 
-    std::string word;
-    while (file >> word)
+    std::string line;
+    while (std::getline(file, line))
     {
-        std::transform(word.begin(), word.end(), word.begin(),
-                       [](unsigned char c){ return std::toupper(c); });
-        _words.emplace_back(word);
+        auto [word, score] = parseDictLine(line);
+        if (!word.empty())
+            _words.emplace_back(word, score);
     }
 
     for (const auto& w : _words)
