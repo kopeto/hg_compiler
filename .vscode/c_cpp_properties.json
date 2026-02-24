@@ -1,6 +1,35 @@
 {
     "configurations": [
         {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Qt/6.10.2/msvc2022_64/include",
+                "C:/Qt/6.10.2/msvc2022_64/include/QtWidgets",
+                "C:/Qt/6.10.2/msvc2022_64/include/QtCore",
+                "C:/Qt/6.10.2/msvc2022_64/include/QtGui",
+                "C:/Qt/6.10.2/msvc2022_64/include/QtOpenGL",
+                "C:/Qt/6.10.2/msvc2022_64/include/QtOpenGLWidgets"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "HG_ASSETS_PATH=\"${workspaceFolder}/assets/\"",
+                "HG_DEFAULT_GRID_PATH=\"${workspaceFolder}/assets/grids/basic_6x6.grid\"",
+                "HG_DEFAULT_DICTIONARY_PATH=\"${workspaceFolder}/assets/words/garbi.txt\""
+            ],
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "windows-msvc-x64",
+            "compilerArgs": [
+                "/DHG_PROJECT_SOURCE_DIR=\"${workspaceFolder}\"",
+                "/DHG_DEFAULT_DICTIONARY_PATH=\"${workspaceFolder}/assets/words/garbi.txt\"",
+                "/DHG_DEFAULT_GRID_PATH=\"${workspaceFolder}/assets/grids/basic_6x6.grid\""
+            ]
+        },
+        {
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",

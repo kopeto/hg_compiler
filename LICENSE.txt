@@ -1,0 +1,4 @@
+HitzGurutzatuak – HG Compiler
+Copyright (c) 2026 HG
+
+All rights reserved.

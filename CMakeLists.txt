@@ -119,3 +119,59 @@ endif()
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
+
+# Install assets
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/"
+    DESTINATION assets
+)
+
+# On Windows run windeployqt during install so CPack picks up all Qt DLLs
+if(WIN32)
+    # Find windeployqt next to qmake / in the Qt bin dir
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt
+        HINTS "${CMAKE_PREFIX_PATH}/bin"
+    )
+    if(WINDEPLOYQT_EXECUTABLE)
+        install(CODE "
+            message(STATUS \"Running windeployqt...\")
+            execute_process(
+                COMMAND \"${WINDEPLOYQT_EXECUTABLE}\"
+                        --release
+                        --no-translations
+                        \"\${CMAKE_INSTALL_PREFIX}/bin/${PROJECT_NAME}.exe\"
+                RESULT_VARIABLE ret
+            )
+            if(NOT ret EQUAL 0)
+                message(FATAL_ERROR \"windeployqt failed\")
+            endif()
+        ")
+    else()
+        message(WARNING "windeployqt not found – Qt DLLs won't be bundled in the installer")
+    endif()
+endif()
+
+# ── CPack / Installer ─────────────────────────────────────────────────────────
+set(CPACK_PACKAGE_NAME              "HitzGurutzatuak")
+set(CPACK_PACKAGE_VENDOR            "HG")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HG Compiler – Crossword solver")
+set(CPACK_PACKAGE_VERSION           ${PROJECT_VERSION})
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "HitzGurutzatuak")
+set(CPACK_RESOURCE_FILE_LICENSE     "${CMAKE_SOURCE_DIR}/LICENSE.txt")
+
+# NSIS (Windows) ──────────────────────────────────────────────────────────────
+set(CPACK_GENERATOR "NSIS")
+set(CPACK_NSIS_DISPLAY_NAME         "HitzGurutzatuak")
+set(CPACK_NSIS_PACKAGE_NAME         "HitzGurutzatuak")
+set(CPACK_NSIS_INSTALL_ROOT         "$PROGRAMFILES64")
+set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+set(CPACK_NSIS_MUI_FINISHPAGE_RUN   "bin\\\\HitzGurutzatuak.exe")
+
+# Shortcut in Start Menu
+set(CPACK_NSIS_CREATE_ICONS_EXTRA
+    "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\HitzGurutzatuak.lnk' '$INSTDIR\\\\bin\\\\HitzGurutzatuak.exe'"
+)
+set(CPACK_NSIS_DELETE_ICONS_EXTRA
+    "Delete '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\HitzGurutzatuak.lnk'"
+)
+
+include(CPack)
