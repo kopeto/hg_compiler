@@ -38,9 +38,15 @@ if(NOT HG_SOURCES)
     message(WARNING "No source files found in src/.")
 endif()
 
-add_executable(${PROJECT_NAME} 
-    ${HG_SOURCES}
-)
+if(WIN32)
+    add_executable(${PROJECT_NAME} WIN32
+        ${HG_SOURCES}
+    )
+else()
+    add_executable(${PROJECT_NAME}
+        ${HG_SOURCES}
+    )
+endif()
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE
@@ -64,6 +70,8 @@ if(ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
 endif()
 
 # Expose timer instrumentation as a numeric compile definition (0/1).
+# On Windows (install/release), assets live next to the .exe; during dev they
+# are still resolved from the source tree via HG_PROJECT_SOURCE_DIR.
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         HG_ENABLE_TIMERS=$<IF:$<BOOL:${ENABLE_TIMERS}>,1,0>
@@ -77,6 +85,22 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Threads::Threads
     Qt6::Widgets
 )
+
+# ── Windows: deploy Qt DLLs next to the executable ───────────────────────────
+if(WIN32)
+    # windeployqt copies all required Qt DLLs/plugins into the output directory.
+    find_program(WINDEPLOYQT windeployqt HINTS "${Qt6_DIR}/../../../bin")
+    if(WINDEPLOYQT)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND "${WINDEPLOYQT}"
+                --no-translations
+                --no-system-d3d-compiler
+                --no-opengl-sw
+                "$<TARGET_FILE:${PROJECT_NAME}>"
+            COMMENT "Deploying Qt6 runtime DLLs..."
+        )
+    endif()
+endif()
 
 # Tests
 if(BUILD_TESTS)
@@ -118,4 +142,9 @@ endif()
 # Install binary target
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
+)
+
+# Install assets alongside the binary
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/"
+    DESTINATION bin/assets
 )
