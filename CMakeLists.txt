@@ -70,8 +70,9 @@ if(ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
 endif()
 
 # Expose timer instrumentation as a numeric compile definition (0/1).
-# On Windows (install/release), assets live next to the .exe; during dev they
-# are still resolved from the source tree via HG_PROJECT_SOURCE_DIR.
+# HG_ASSETS_BASE_DIR: in dev builds points to source tree; for installed
+# Windows builds the app uses a path relative to the .exe at runtime
+# (see src/app_paths.h).
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         HG_ENABLE_TIMERS=$<IF:$<BOOL:${ENABLE_TIMERS}>,1,0>
@@ -148,3 +149,50 @@ install(TARGETS ${PROJECT_NAME}
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets/"
     DESTINATION bin/assets
 )
+
+# ── Windows: also install the Qt DLLs that windeployqt dropped next to the exe
+if(WIN32)
+    install(DIRECTORY "$<TARGET_FILE_DIR:${PROJECT_NAME}>/"
+        DESTINATION bin
+        FILES_MATCHING
+            PATTERN "*.dll"
+            PATTERN "platforms"
+            PATTERN "styles"
+            PATTERN "imageformats"
+            PATTERN "iconengines"
+    )
+endif()
+
+# ── CPack installer (Windows: NSIS .exe  |  Linux: DEB/TGZ) ──────────────────
+set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VENDOR            "HG")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+set(CPACK_PACKAGE_VERSION           "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME}")
+
+# Windows — NSIS wizard installer (.exe with install wizard)
+if(WIN32)
+    set(CPACK_GENERATOR "NSIS")
+
+    # Start-menu shortcut
+    set(CPACK_NSIS_MENU_LINKS
+        "bin\\\\${PROJECT_NAME}.exe" "${PROJECT_NAME}"
+    )
+    # Desktop shortcut
+    set(CPACK_NSIS_CREATE_ICONS_EXTRA
+        "CreateShortCut '$DESKTOP\\\\${PROJECT_NAME}.lnk' '$INSTDIR\\\\bin\\\\${PROJECT_NAME}.exe'"
+    )
+    set(CPACK_NSIS_DELETE_ICONS_EXTRA
+        "Delete '$DESKTOP\\\\${PROJECT_NAME}.lnk'"
+    )
+    # "Launch HitzGurutzatuak" checkbox on the finish page
+    set(CPACK_NSIS_MUI_FINISHPAGE_RUN "bin\\\\${PROJECT_NAME}.exe")
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_MODIFY_PATH OFF)
+
+else()
+    set(CPACK_GENERATOR "TGZ;DEB")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "HG")
+endif()
+
+include(CPack)
