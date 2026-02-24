@@ -1,11 +1,11 @@
 #pragma once
 
+#include "dict.h"
+#include "grid.h"
+
 #include <QObject>
 #include <QVector>
 #include <atomic>
-
-#include "grid.h"
-#include "dict.h"
 
 // ──────────────────────────────────────────────────────────────
 // Worker that runs Grid::solve() on a separate thread and emits
@@ -28,7 +28,7 @@ public slots:
     void run();
 
 private:
-    Grid*              _grid;
-    const Dict*        _dict;
-    std::atomic<bool>  _cancel{false};
+    Grid*             _grid;
+    const Dict*       _dict;
+    std::atomic<bool> _cancel{false};
 };

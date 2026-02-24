@@ -1,26 +1,23 @@
 #include "cellwidget.h"
 
-#include <QPainter>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPainter>
 #include <cctype>
 
-CellWidget::CellWidget(bool isBlack, QWidget* parent)
-    : QWidget(parent), _isBlack(isBlack)
-{
+CellWidget::CellWidget(bool isBlack, QWidget* parent) : QWidget(parent), _isBlack(isBlack) {
     setFixedSize(CELL_SIZE, CELL_SIZE);
     setFocusPolicy(_isBlack ? Qt::NoFocus : Qt::StrongFocus);
 }
 
-void CellWidget::setLetter(char c)
-{
-    if (_isBlack) return;
+void CellWidget::setLetter(char c) {
+    if (_isBlack)
+        return;
     _letter = (c == '.' || c == '\0') ? '_' : c;
     update();
 }
 
-void CellWidget::setBlack(bool black)
-{
+void CellWidget::setBlack(bool black) {
     _isBlack = black;
     _fixed   = false;
     _letter  = black ? '#' : '_';
@@ -28,22 +25,21 @@ void CellWidget::setBlack(bool black)
     update();
 }
 
-void CellWidget::setFixed(bool fixed)
-{
-    if (_isBlack) return;
+void CellWidget::setFixed(bool fixed) {
+    if (_isBlack)
+        return;
     _fixed = fixed;
     update();
 }
 
-void CellWidget::setHighlight(int level)
-{
-    if (_highlight == level) return;
+void CellWidget::setHighlight(int level) {
+    if (_highlight == level)
+        return;
     _highlight = level;
     update();
 }
 
-void CellWidget::paintEvent(QPaintEvent*)
-{
+void CellWidget::paintEvent(QPaintEvent*) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing, false);
 
@@ -52,15 +48,17 @@ void CellWidget::paintEvent(QPaintEvent*)
     } else {
         // Background — priority: fixed > active-cell > word-highlight > plain
         QColor bg = Qt::white;
-        if (_fixed)               bg = QColor(232, 240, 255);   // fixed: very pale blue
-        else if (_highlight == 2) bg = QColor(255, 255, 140);   // active cell: soft yellow
-        else if (_highlight == 1) bg = QColor(220, 235, 255);   // word: pale blue
+        if (_fixed)
+            bg = QColor(232, 240, 255); // fixed: very pale blue
+        else if (_highlight == 2)
+            bg = QColor(255, 255, 140); // active cell: soft yellow
+        else if (_highlight == 1)
+            bg = QColor(220, 235, 255); // word: pale blue
 
         p.fillRect(rect(), bg);
 
         // Border
-        p.setPen(QPen(_fixed ? QColor(120, 160, 220) : QColor(80, 80, 80),
-                      _fixed ? 1 : 1));
+        p.setPen(QPen(_fixed ? QColor(120, 160, 220) : QColor(80, 80, 80), _fixed ? 1 : 1));
         p.drawRect(rect().adjusted(0, 0, -1, -1));
 
         // Focus ring (only when not fixed and not highlighted)
@@ -81,10 +79,10 @@ void CellWidget::paintEvent(QPaintEvent*)
     }
 }
 
-void CellWidget::mousePressEvent(QMouseEvent* event)
-{
+void CellWidget::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
-        if (!_isBlack) setFocus();
+        if (!_isBlack)
+            setFocus();
         emit clicked(this);
     } else if (event->button() == Qt::RightButton) {
         emit rightClicked(this);
@@ -92,9 +90,11 @@ void CellWidget::mousePressEvent(QMouseEvent* event)
     QWidget::mousePressEvent(event);
 }
 
-void CellWidget::keyPressEvent(QKeyEvent* event)
-{
-    if (_isBlack) { QWidget::keyPressEvent(event); return; }
+void CellWidget::keyPressEvent(QKeyEvent* event) {
+    if (_isBlack) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
 
     int key = event->key();
     if (key >= Qt::Key_A && key <= Qt::Key_Z) {
@@ -115,8 +115,7 @@ void CellWidget::keyPressEvent(QKeyEvent* event)
         _fixed  = false;
         update();
         emit fixToggled(this);
-    } else if (key == Qt::Key_Left  || key == Qt::Key_Right ||
-               key == Qt::Key_Up    || key == Qt::Key_Down) {
+    } else if (key == Qt::Key_Left || key == Qt::Key_Right || key == Qt::Key_Up || key == Qt::Key_Down) {
         emit keyNavigate(this, key);
     } else {
         QWidget::keyPressEvent(event);

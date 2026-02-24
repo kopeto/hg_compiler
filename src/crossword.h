@@ -1,17 +1,17 @@
 #pragma once
 
-#include <iostream>
-#include <vector>
-#include <string>
-
 #include "grid.h"
+
+#include <iostream>
+#include <string>
+#include <vector>
 
 struct Crossword {
 
     Crossword();
     Crossword(const std::string& gridFilePath);
     Crossword(const std::vector<std::string>& lines);
-    
+
     void setCell(int x, int y, char value);
 
     void printGrid() const;
@@ -20,10 +20,10 @@ struct Crossword {
 
     const std::vector<GridWord>& getGridDownWords() const;
 
-    Grid& getGrid() ;
+    Grid& getGrid();
 
 private:
-    int _width;
-    int _height;
+    int  _width;
+    int  _height;
     Grid _grid;
 };

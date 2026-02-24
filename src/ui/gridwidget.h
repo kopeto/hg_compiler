@@ -1,11 +1,11 @@
 #pragma once
 
-#include <QWidget>
-#include <QVector>
-
 #include "cellwidget.h"
 #include "grid.h"
 #include "grid_word.h"
+
+#include <QVector>
+#include <QWidget>
 
 // ──────────────────────────────────────────────────────────────
 // Grid widget: a QWidget that lays out CellWidgets in a grid.
@@ -45,16 +45,19 @@ public:
     bool editMode() const { return _editMode; }
 
     // Returns {row, col, letter} for every currently fixed cell
-    struct FixedCell { int row, col; char letter; };
+    struct FixedCell {
+        int  row, col;
+        char letter;
+    };
     QVector<FixedCell> getFixedCells() const;
 
     // Current selection
-    int  selectedRow() const { return _selRow; }
-    int  selectedCol() const { return _selCol; }
+    int               selectedRow() const { return _selRow; }
+    int               selectedCol() const { return _selCol; }
     GridWordDirection selectedDir() const { return _selDir; }
 
 signals:
-    void gridModified();   // cell toggled black/white in edit mode
+    void gridModified();                                       // cell toggled black/white in edit mode
     void cellFixed(int row, int col, char letter, bool fixed); // letter locked/unlocked
     // Emitted whenever the selected cell or direction changes
     void selectionChanged(int row, int col, GridWordDirection dir);
@@ -80,13 +83,13 @@ private:
     // Handle keyboard navigation from a cell
     void onKeyNavigate(int fromR, int fromC, int key);
 
-    int _rows     = 0;
-    int _cols     = 0;
-    bool _editMode = false;
+    int                           _rows     = 0;
+    int                           _cols     = 0;
+    bool                          _editMode = false;
     QVector<QVector<CellWidget*>> _cells;
 
     // Current selection (-1 = none)
-    int _selRow = -1;
-    int _selCol = -1;
+    int               _selRow = -1;
+    int               _selCol = -1;
     GridWordDirection _selDir = GridWordDirection::ACROSS;
 };

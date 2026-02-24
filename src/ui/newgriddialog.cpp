@@ -1,17 +1,16 @@
 #include "newgriddialog.h"
 
 #include <QFormLayout>
-#include <QVBoxLayout>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QFrame>
+#include <QVBoxLayout>
 
 static constexpr int DEFAULT_ROWS = 8;
 static constexpr int DEFAULT_COLS = 8;
 static constexpr int MAX_PREVIEW  = 480; // px — max scroll area size
 
-NewGridDialog::NewGridDialog(QWidget* parent) : QDialog(parent)
-{
+NewGridDialog::NewGridDialog(QWidget* parent) : QDialog(parent) {
     setWindowTitle(tr("New Blank Grid"));
     setModal(true);
 
@@ -43,8 +42,7 @@ NewGridDialog::NewGridDialog(QWidget* parent) : QDialog(parent)
     _scroll->setFrameShape(QFrame::StyledPanel);
 
     // ── Buttons ────────────────────────────────────────────
-    _buttons = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    _buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(_buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -66,17 +64,19 @@ NewGridDialog::NewGridDialog(QWidget* parent) : QDialog(parent)
     rebuildPreview();
 }
 
-void NewGridDialog::rebuildPreview()
-{
+void NewGridDialog::rebuildPreview() {
     _preview->loadBlank(_rowsSpin->value(), _colsSpin->value());
     // Let the scroll area re-evaluate the new fixed size
     _scroll->updateGeometry();
 }
 
-int NewGridDialog::gridRows() const { return _rowsSpin->value(); }
-int NewGridDialog::gridCols() const { return _colsSpin->value(); }
+int NewGridDialog::gridRows() const {
+    return _rowsSpin->value();
+}
+int NewGridDialog::gridCols() const {
+    return _colsSpin->value();
+}
 
-QVector<QVector<char>> NewGridDialog::layout() const
-{
+QVector<QVector<char>> NewGridDialog::layout() const {
     return _preview->toCharGrid();
 }

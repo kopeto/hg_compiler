@@ -1,12 +1,12 @@
 #pragma once
 
+#include "gridwidget.h"
+
 #include <QDialog>
-#include <QSpinBox>
 #include <QDialogButtonBox>
 #include <QScrollArea>
+#include <QSpinBox>
 #include <QVector>
-
-#include "gridwidget.h"
 
 // ──────────────────────────────────────────────────────────────
 // Dialog to create a new blank grid.
@@ -31,9 +31,9 @@ private slots:
     void rebuildPreview();
 
 private:
-    QSpinBox*          _rowsSpin   = nullptr;
-    QSpinBox*          _colsSpin   = nullptr;
-    GridWidget*        _preview    = nullptr;
-    QScrollArea*       _scroll     = nullptr;
-    QDialogButtonBox*  _buttons    = nullptr;
+    QSpinBox*         _rowsSpin = nullptr;
+    QSpinBox*         _colsSpin = nullptr;
+    GridWidget*       _preview  = nullptr;
+    QScrollArea*      _scroll   = nullptr;
+    QDialogButtonBox* _buttons  = nullptr;
 };

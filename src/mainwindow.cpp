@@ -1,29 +1,28 @@
 #include "mainwindow.h"
 
+#include "ui/newgriddialog.h"
+
+#include <QAction>
 #include <QApplication>
 #include <QFile>
-#include <QTextStream>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFrame>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QMenuBar>
+#include <QListWidget>
 #include <QMenu>
-#include <QAction>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
-#include <QFrame>
-#include <QListWidget>
+#include <QTextStream>
+#include <QVBoxLayout>
 #include <cctype>
-
-#include "ui/newgriddialog.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  MainWindow
 // ═══════════════════════════════════════════════════════════════
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
-{
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Hitz Gurutzatuak");
     resize(900, 620);
 
@@ -39,15 +38,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     loadDefaultGrid();
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     forceStopSolver();
 }
 
 // ── UI setup ─────────────────────────────────────────────────
 
-void MainWindow::setupMenuBar()
-{
+void MainWindow::setupMenuBar() {
     // ── File ──
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
 
@@ -103,8 +100,7 @@ void MainWindow::setupMenuBar()
     connect(_actResume, &QAction::triggered, this, &MainWindow::onResumeSolver);
 }
 
-void MainWindow::setupCentralWidget()
-{
+void MainWindow::setupCentralWidget() {
     auto* centralWidget = new QWidget(this);
     auto* mainLayout    = new QHBoxLayout(centralWidget);
     mainLayout->setContentsMargins(8, 8, 8, 8);
@@ -112,14 +108,13 @@ void MainWindow::setupCentralWidget()
 
     // ── Left: container that centres the grid ──
     _gridWidget = new GridWidget(this);
-    connect(_gridWidget, &GridWidget::gridModified,        this, &MainWindow::onGridModified);
-    connect(_gridWidget, &GridWidget::cellFixed,           this, &MainWindow::onCellFixed);
-    connect(_gridWidget, &GridWidget::selectionChanged,    this, &MainWindow::onSelectionChanged);
+    connect(_gridWidget, &GridWidget::gridModified, this, &MainWindow::onGridModified);
+    connect(_gridWidget, &GridWidget::cellFixed, this, &MainWindow::onCellFixed);
+    connect(_gridWidget, &GridWidget::selectionChanged, this, &MainWindow::onSelectionChanged);
     // interactionRequested: activate cancel flag immediately (non-blocking).
     // The solver thread will finish on its own at the next recursive check.
     // No wait() here — that would deadlock the UI thread.
-    connect(_gridWidget, &GridWidget::interactionRequested, this, &MainWindow::pauseSolver,
-            Qt::DirectConnection);
+    connect(_gridWidget, &GridWidget::interactionRequested, this, &MainWindow::pauseSolver, Qt::DirectConnection);
 
     _gridArea = new QWidget(this);
     _gridArea->setStyleSheet("background: #e8e8e8;");
@@ -141,18 +136,17 @@ void MainWindow::setupCentralWidget()
     auto makeBtn = [&](const QString& text, const QString& tooltip) -> QPushButton* {
         auto* btn = new QPushButton(text, btnBar);
         btn->setToolTip(tooltip);
-        btn->setStyleSheet(
-            "QPushButton {"
-            "  background: #dcdcdc;"
-            "  color: #222;"
-            "  border: 1px solid #aaa;"
-            "  border-radius: 4px;"
-            "  padding: 4px 12px;"
-            "  font-size: 12px;"
-            "}"
-            "QPushButton:hover  { background: #c8c8c8; border-color: #888; }"
-            "QPushButton:pressed{ background: #b0b0b0; }"
-            "QPushButton:disabled { color: #999; background: #ebebeb; }");
+        btn->setStyleSheet("QPushButton {"
+                           "  background: #dcdcdc;"
+                           "  color: #222;"
+                           "  border: 1px solid #aaa;"
+                           "  border-radius: 4px;"
+                           "  padding: 4px 12px;"
+                           "  font-size: 12px;"
+                           "}"
+                           "QPushButton:hover  { background: #c8c8c8; border-color: #888; }"
+                           "QPushButton:pressed{ background: #b0b0b0; }"
+                           "QPushButton:disabled { color: #999; background: #ebebeb; }");
         return btn;
     };
 
@@ -167,7 +161,7 @@ void MainWindow::setupCentralWidget()
 
     btnLayout->addStretch();
 
-    gridAreaLayout->addWidget(btnBar, 0);   // fixed height, always below the grid
+    gridAreaLayout->addWidget(btnBar, 0); // fixed height, always below the grid
 
     mainLayout->addWidget(_gridArea, /*stretch=*/3);
 
@@ -202,8 +196,7 @@ void MainWindow::setupCentralWidget()
     _wordList = new QListWidget(rightPanel);
     _wordList->setAlternatingRowColors(true);
     _wordList->setStyleSheet("font-family: monospace; font-size: 12px;");
-    connect(_wordList, &QListWidget::itemDoubleClicked,
-            this, &MainWindow::onWordListDoubleClicked);
+    connect(_wordList, &QListWidget::itemDoubleClicked, this, &MainWindow::onWordListDoubleClicked);
     rightLayout->addWidget(_wordList, /*stretch=*/1);
 
     mainLayout->addWidget(rightPanel, /*stretch=*/1);
@@ -214,11 +207,10 @@ void MainWindow::setupCentralWidget()
 
 // ── Domain helpers ────────────────────────────────────────────
 
-void MainWindow::loadDefaultGrid()
-{
+void MainWindow::loadDefaultGrid() {
     try {
         _currentGridPath = HG_DEFAULT_GRID_PATH;
-        _crossword = std::make_unique<Crossword>(_currentGridPath);
+        _crossword       = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
         // Always start in edit mode
@@ -229,9 +221,9 @@ void MainWindow::loadDefaultGrid()
     }
 }
 
-void MainWindow::onCellFixed(int row, int col, char letter, bool fixed)
-{
-    if (!_crossword) return;
+void MainWindow::onCellFixed(int row, int col, char letter, bool fixed) {
+    if (!_crossword)
+        return;
     Grid& g = _crossword->getGrid();
     if (fixed) {
         g.fixCell(row, col, letter);
@@ -241,11 +233,12 @@ void MainWindow::onCellFixed(int row, int col, char letter, bool fixed)
         // Fix every non-empty non-fixed letter in the words crossing this cell
         // so the solver treats them as hard constraints.
         auto applyFix = [&](GridWord* gw) {
-            if (!gw) return;
+            if (!gw)
+                return;
             auto [startR, startC] = gw->getPosition();
             for (int i = 0; i < (int)gw->length; ++i) {
-                int r = (gw->direction == GridWordDirection::ACROSS) ? startR : startR + i;
-                int c = (gw->direction == GridWordDirection::ACROSS) ? startC + i : startC;
+                int   r    = (gw->direction == GridWordDirection::ACROSS) ? startR : startR + i;
+                int   c    = (gw->direction == GridWordDirection::ACROSS) ? startC + i : startC;
                 Cell* cell = gw->cells[i];
                 if (!cell->fixed && cell->value != '_') {
                     g.fixCell(r, c, cell->value);
@@ -253,31 +246,35 @@ void MainWindow::onCellFixed(int row, int col, char letter, bool fixed)
                 }
             }
         };
-        try { applyFix(g.getGridWordAt(row, col, GridWordDirection::ACROSS)); } catch (...) {}
-        try { applyFix(g.getGridWordAt(row, col, GridWordDirection::DOWN));   } catch (...) {}
+        try {
+            applyFix(g.getGridWordAt(row, col, GridWordDirection::ACROSS));
+        } catch (...) {
+        }
+        try {
+            applyFix(g.getGridWordAt(row, col, GridWordDirection::DOWN));
+        } catch (...) {
+        }
     }
 
     // Refresh the candidate list — letters changed
-    updateWordList(_gridWidget->selectedRow(), _gridWidget->selectedCol(),
-                   _gridWidget->selectedDir());
+    updateWordList(_gridWidget->selectedRow(), _gridWidget->selectedCol(), _gridWidget->selectedDir());
 }
 
-void MainWindow::onSelectionChanged(int row, int col, GridWordDirection dir)
-{
+void MainWindow::onSelectionChanged(int row, int col, GridWordDirection dir) {
     updateWordList(row, col, dir);
 }
 
-void MainWindow::updateWordList(int row, int col, GridWordDirection dir)
-{
-    if (!_wordList) return;
+void MainWindow::updateWordList(int row, int col, GridWordDirection dir) {
+    if (!_wordList)
+        return;
     _wordList->clear();
     if (!_crossword || !_dict || row < 0) {
         _wordListLabel->setText(tr("Candidates:"));
         return;
     }
 
-    const Grid& g = _crossword->getGrid();
-    GridWord* gw  = g.getGridWordAt(row, col, dir);
+    const Grid& g  = _crossword->getGrid();
+    GridWord*   gw = g.getGridWordAt(row, col, dir);
     if (!gw) {
         _wordListLabel->setText(tr("Candidates:"));
         return;
@@ -293,7 +290,7 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir)
         patStr += (v != '_') ? v : '_';
     }
 
-    Pattern pat(patStr);
+    Pattern                  pat(patStr);
     std::vector<const Word*> candidates = _dict->getWordsByPattern(pat);
 
     _wordListLabel->setText(tr("Candidates (%1):").arg(candidates.size()));
@@ -304,27 +301,30 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir)
     }
 }
 
-void MainWindow::onWordListDoubleClicked(QListWidgetItem* item)
-{
-    if (!item || !_crossword) return;
+void MainWindow::onWordListDoubleClicked(QListWidgetItem* item) {
+    if (!item || !_crossword)
+        return;
 
-    int row = _gridWidget->selectedRow();
-    int col = _gridWidget->selectedCol();
+    int               row = _gridWidget->selectedRow();
+    int               col = _gridWidget->selectedCol();
     GridWordDirection dir = _gridWidget->selectedDir();
-    if (row < 0) return;
+    if (row < 0)
+        return;
 
-    Grid& g       = _crossword->getGrid();
-    GridWord* gw  = g.getGridWordAt(row, col, dir);
-    if (!gw) return;
+    Grid&     g  = _crossword->getGrid();
+    GridWord* gw = g.getGridWordAt(row, col, dir);
+    if (!gw)
+        return;
 
     std::string word = item->text().toStdString();
-    if (word.size() != gw->length) return;
+    if (word.size() != gw->length)
+        return;
 
     // Write each letter into the grid model and the UI
     auto [startR, startC] = gw->getPosition();
     for (int i = 0; i < (int)word.size(); ++i) {
-        int r = (dir == GridWordDirection::ACROSS) ? startR : startR + i;
-        int c = (dir == GridWordDirection::ACROSS) ? startC + i : startC;
+        int  r  = (dir == GridWordDirection::ACROSS) ? startR : startR + i;
+        int  c  = (dir == GridWordDirection::ACROSS) ? startC + i : startC;
         char ch = static_cast<char>(std::toupper((unsigned char)word[i]));
         g.fixCell(r, c, ch);
         _gridWidget->setCellFixed(r, c, ch);
@@ -336,65 +336,64 @@ void MainWindow::onWordListDoubleClicked(QListWidgetItem* item)
 
 // ── Grid slots ────────────────────────────────────────────────
 
-void MainWindow::onNewBlankGrid()
-{
+void MainWindow::onNewBlankGrid() {
     forceStopSolver();
     NewGridDialog dlg(this);
-    if (dlg.exec() != QDialog::Accepted) return;
+    if (dlg.exec() != QDialog::Accepted)
+        return;
 
     // Convert the dialog's char layout → vector<string> for Grid constructor
-    auto charLayout = dlg.layout();
+    auto                     charLayout = dlg.layout();
     std::vector<std::string> lines;
     lines.reserve(charLayout.size());
     for (const auto& row : charLayout) {
         std::string line;
         line.reserve(row.size());
-        for (char c : row) line += (c == '#' ? '#' : '.');
+        for (char c : row)
+            line += (c == '#' ? '#' : '.');
         lines.push_back(line);
     }
 
     try {
-        _crossword       = std::make_unique<Crossword>(lines);
+        _crossword = std::make_unique<Crossword>(lines);
         _currentGridPath.clear();
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
         _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("New %1×%2 grid created. Edit mode ON.")
-                                 .arg(charLayout.size())
-                                 .arg(charLayout.isEmpty() ? 0 : charLayout[0].size()));
+                                     .arg(charLayout.size())
+                                     .arg(charLayout.isEmpty() ? 0 : charLayout[0].size()));
     } catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));
     }
 }
 
-void MainWindow::onToggleEditMode(bool checked)
-{
+void MainWindow::onToggleEditMode(bool checked) {
     _gridWidget->setEditMode(checked);
     updateEditModeIndicator();
-    statusBar()->showMessage(checked
-        ? tr("Edit mode ON — right-click a cell to toggle black/white")
-        : tr("Edit mode OFF"), 3000);
+    statusBar()->showMessage(
+        checked ? tr("Edit mode ON — right-click a cell to toggle black/white") : tr("Edit mode OFF"), 3000);
 }
 
-void MainWindow::updateEditModeIndicator()
-{
-    if (!_editModeLabel) return;
+void MainWindow::updateEditModeIndicator() {
+    if (!_editModeLabel)
+        return;
     if (_gridWidget && _gridWidget->editMode())
         _editModeLabel->setText(tr("✏️ Edit mode ON"));
     else
         _editModeLabel->setText(tr("🔒 Edit mode OFF"));
 }
 
-void MainWindow::onOpenGrid()
-{
+void MainWindow::onOpenGrid() {
     forceStopSolver();
-    QString path = QFileDialog::getOpenFileName(
-        this, tr("Open Grid"), QString(), tr("Grid files (*.grid);;All files (*)"));
-    if (path.isEmpty()) return;
+    QString path =
+        QFileDialog::getOpenFileName(this, tr("Open Grid"), QString(), tr("Grid files (*.grid);;All files (*)"));
+    if (path.isEmpty())
+        return;
 
     try {
         _currentGridPath = path.toStdString();
-        _crossword = std::make_unique<Crossword>(_currentGridPath);
+        _crossword       = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
         _actEditMode->setChecked(true);
@@ -404,11 +403,11 @@ void MainWindow::onOpenGrid()
     }
 }
 
-void MainWindow::onSaveGrid()
-{
-    QString path = QFileDialog::getSaveFileName(
-        this, tr("Save Grid"), QString(), tr("Grid files (*.grid);;All files (*)"));
-    if (path.isEmpty()) return;
+void MainWindow::onSaveGrid() {
+    QString path =
+        QFileDialog::getSaveFileName(this, tr("Save Grid"), QString(), tr("Grid files (*.grid);;All files (*)"));
+    if (path.isEmpty())
+        return;
 
     QFile f(path);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -421,7 +420,8 @@ void MainWindow::onSaveGrid()
     // encodes structure, not solution)
     auto grid = _gridWidget->toCharGrid();
     for (const auto& row : grid) {
-        for (char c : row) out << QChar(c == '#' ? '#' : '.');
+        for (char c : row)
+            out << QChar(c == '#' ? '#' : '.');
         out << '\n';
     }
     statusBar()->showMessage(tr("Grid saved: %1").arg(path));
@@ -429,9 +429,9 @@ void MainWindow::onSaveGrid()
 
 // ── Dictionary slots ─────────────────────────────────────────
 
-void MainWindow::onClearGrid()
-{
-    if (!_crossword) return;
+void MainWindow::onClearGrid() {
+    if (!_crossword)
+        return;
     forceStopSolver();
 
     Grid& g = _crossword->getGrid();
@@ -440,7 +440,7 @@ void MainWindow::onClearGrid()
     for (int r = 0; r < g.getRows(); ++r)
         for (int c = 0; c < g.getCols(); ++c)
             g.unfixCell(r, c);
-    g.reset();  // clears all non-fixed (now all) fillable cells to '_'
+    g.reset(); // clears all non-fixed (now all) fillable cells to '_'
 
     _gridWidget->loadFromGrid(g);
     // Restore edit mode (loadFromGrid resets the widget state)
@@ -450,64 +450,60 @@ void MainWindow::onClearGrid()
     statusBar()->showMessage(tr("Grid cleared."));
 }
 
-void MainWindow::onLoadDefaultDictionary()
-{
+void MainWindow::onLoadDefaultDictionary() {
     try {
         _dictPath = HG_DEFAULT_DICTIONARY_PATH;
         _dict     = std::make_unique<Dict>();
         statusBar()->showMessage(tr("Default dictionary loaded."), 3000);
     } catch (const std::exception& e) {
-        QMessageBox::critical(this, tr("Dictionary error"),
-                              tr("Cannot load dictionary:\n%1").arg(e.what()));
+        QMessageBox::critical(this, tr("Dictionary error"), tr("Cannot load dictionary:\n%1").arg(e.what()));
         _dict = nullptr;
     }
     updateDictLabel();
 }
 
-void MainWindow::onLoadCustomDictionary()
-{
-    QString path = QFileDialog::getOpenFileName(
-        this, tr("Select Dictionary"), QString(),
-        tr("Text files (*.txt);;All files (*)"));
-    if (path.isEmpty()) return;
+void MainWindow::onLoadCustomDictionary() {
+    QString path =
+        QFileDialog::getOpenFileName(this, tr("Select Dictionary"), QString(), tr("Text files (*.txt);;All files (*)"));
+    if (path.isEmpty())
+        return;
 
     try {
-        _dictPath   = path;
-        _dict       = std::make_unique<Dict>();
+        _dictPath = path;
+        _dict     = std::make_unique<Dict>();
         _dict->load(path.toStdString());
         statusBar()->showMessage(tr("Dictionary loaded: %1").arg(path), 3000);
     } catch (const std::exception& e) {
-        QMessageBox::critical(this, tr("Dictionary error"),
-                              tr("Cannot load dictionary:\n%1").arg(e.what()));
+        QMessageBox::critical(this, tr("Dictionary error"), tr("Cannot load dictionary:\n%1").arg(e.what()));
         _dict = nullptr;
     }
     updateDictLabel();
 }
 
-void MainWindow::updateDictLabel()
-{
-    if (!_dictLabel) return;
+void MainWindow::updateDictLabel() {
+    if (!_dictLabel)
+        return;
     if (_dict)
         _dictLabel->setText(tr("📖 %1").arg(QFileInfo(_dictPath).fileName()));
     else
         _dictLabel->setText(tr("⚠️ No dictionary loaded"));
 }
 
-
-void MainWindow::onGridModified()
-{
-    if (!_gridWidget->editMode()) return;
+void MainWindow::onGridModified() {
+    if (!_gridWidget->editMode())
+        return;
 
     // Snapshot fixed cells BEFORE rebuilding (loadFromGrid resets everything)
     auto fixed = _gridWidget->getFixedCells();
 
-    auto charLayout = _gridWidget->toCharGrid();
+    auto                     charLayout = _gridWidget->toCharGrid();
     std::vector<std::string> lines;
     lines.reserve(charLayout.size());
     for (const auto& row : charLayout) {
         std::string line;
         line.reserve(row.size());
-        for (char c : row) line += (c == '#' ? '#' : '.');
+        for (char c : row)
+            line += (c == '#' ? '#' : '.');
         lines.push_back(line);
     }
 
@@ -524,20 +520,18 @@ void MainWindow::onGridModified()
                 // Only restore the fixed cell if it still belongs to a word
                 // after the grid rebuild. A cell that became isolated (no word
                 // of length ≥ 2) or black must be silently dropped.
-                if (!g.cellHasWord(fc.row, fc.col)) continue;
+                if (!g.cellHasWord(fc.row, fc.col))
+                    continue;
                 _gridWidget->setCellFixed(fc.row, fc.col, fc.letter);
                 g.fixCell(fc.row, fc.col, fc.letter);
             }
 
             statusBar()->showMessage(
-                tr("Grid updated — %1 across, %2 down")
-                    .arg(g.getAcrossWords().size())
-                    .arg(g.getDownWords().size()),
+                tr("Grid updated — %1 across, %2 down").arg(g.getAcrossWords().size()).arg(g.getDownWords().size()),
                 2000);
 
             // Refresh candidate list — word structure may have changed
-            updateWordList(_gridWidget->selectedRow(), _gridWidget->selectedCol(),
-                           _gridWidget->selectedDir());
+            updateWordList(_gridWidget->selectedRow(), _gridWidget->selectedCol(), _gridWidget->selectedDir());
         } catch (const std::exception& e) {
             statusBar()->showMessage(tr("⚠️ %1").arg(QString::fromStdString(e.what())), 3000);
         }
@@ -555,8 +549,7 @@ void MainWindow::onGridModified()
 
 // ── Solver slots ─────────────────────────────────────────────
 
-void MainWindow::adjustWindowForGrid()
-{
+void MainWindow::adjustWindowForGrid() {
     // Minimum size = grid pixels + margins + right panel + spacing
     const int rightPanelMin = 200;
     const int spacing       = 12;
@@ -579,23 +572,26 @@ void MainWindow::adjustWindowForGrid()
     setMinimumSize(minW, minH + extraH);
 
     // Expand current size if it's smaller than the new minimum
-    int newW = qMax(width(),  minW);
+    int newW = qMax(width(), minW);
     int newH = qMax(height(), minH + extraH);
     if (newW != width() || newH != height())
         resize(newW, newH);
 }
 
-void MainWindow::updateSolverActions()
-{
-    if (_actSolve)   _actSolve->setEnabled(!_solving);
-    if (_actStop)    _actStop->setEnabled(_solving);
-    if (_actResume)  _actResume->setEnabled(!_solving && _paused);
-    if (_resumeButton) _resumeButton->setVisible(!_solving && _paused);
+void MainWindow::updateSolverActions() {
+    if (_actSolve)
+        _actSolve->setEnabled(!_solving);
+    if (_actStop)
+        _actStop->setEnabled(_solving);
+    if (_actResume)
+        _actResume->setEnabled(!_solving && _paused);
+    if (_resumeButton)
+        _resumeButton->setVisible(!_solving && _paused);
 }
 
-void MainWindow::pauseSolver()
-{
-    if (!_solving) return;
+void MainWindow::pauseSolver() {
+    if (!_solving)
+        return;
     _paused = true;
     if (_solverWorker)
         _solverWorker->requestCancel();
@@ -603,10 +599,13 @@ void MainWindow::pauseSolver()
     // The solver fires onSolverFinished via QueuedConnection when done.
 }
 
-void MainWindow::onSolve()
-{
-    if (_solving) return;
-    if (!_crossword) { QMessageBox::information(this, tr("Solver"), tr("No grid loaded.")); return; }
+void MainWindow::onSolve() {
+    if (_solving)
+        return;
+    if (!_crossword) {
+        QMessageBox::information(this, tr("Solver"), tr("No grid loaded."));
+        return;
+    }
 
     Grid* grid = &_crossword->getGrid();
 
@@ -626,17 +625,18 @@ void MainWindow::onSolve()
     _solverWorker = new SolverWorker(grid, _dict.get());
     _solverWorker->moveToThread(_solverThread);
 
-    connect(_solverThread, &QThread::started,       _solverWorker, &SolverWorker::run);
-    connect(_solverWorker, &SolverWorker::finished,  this,          &MainWindow::onSolverFinished);
+    connect(_solverThread, &QThread::started, _solverWorker, &SolverWorker::run);
+    connect(_solverWorker, &SolverWorker::finished, this, &MainWindow::onSolverFinished);
 
     _refreshTimer->start();
     _solverThread->start();
 }
 
-void MainWindow::onResumeSolver()
-{
-    if (_solving || !_paused) return;
-    if (!_crossword) return;
+void MainWindow::onResumeSolver() {
+    if (_solving || !_paused)
+        return;
+    if (!_crossword)
+        return;
 
     _paused  = false;
     _solving = true;
@@ -651,25 +651,25 @@ void MainWindow::onResumeSolver()
     _solverWorker = new SolverWorker(grid, _dict.get());
     _solverWorker->moveToThread(_solverThread);
 
-    connect(_solverThread, &QThread::started,       _solverWorker, &SolverWorker::run);
-    connect(_solverWorker, &SolverWorker::finished,  this,          &MainWindow::onSolverFinished);
+    connect(_solverThread, &QThread::started, _solverWorker, &SolverWorker::run);
+    connect(_solverWorker, &SolverWorker::finished, this, &MainWindow::onSolverFinished);
 
     _refreshTimer->start();
     _solverThread->start();
 }
 
-void MainWindow::onStopSolver()
-{
-    if (!_solving) return;
-    _paused = false;
+void MainWindow::onStopSolver() {
+    if (!_solving)
+        return;
+    _paused           = false;
     _pendingAfterStop = nullptr;
-    if (_solverWorker) _solverWorker->requestCancel();
+    if (_solverWorker)
+        _solverWorker->requestCancel();
     updateSolverActions();
     statusBar()->showMessage(tr("Solver stopping…"));
 }
 
-void MainWindow::onSolverFinished(bool success)
-{
+void MainWindow::onSolverFinished(bool success) {
     _refreshTimer->stop();
     _solving = false;
 
@@ -677,15 +677,17 @@ void MainWindow::onSolverFinished(bool success)
     if (_solverThread) {
         _solverThread->quit();
         _solverThread->wait();
-        _solverThread->deleteLater(); _solverThread = nullptr;
+        _solverThread->deleteLater();
+        _solverThread = nullptr;
     }
     if (_solverWorker) {
-        _solverWorker->deleteLater(); _solverWorker = nullptr;
+        _solverWorker->deleteLater();
+        _solverWorker = nullptr;
     }
 
     // Run any deferred action (e.g. grid rebuild triggered during solve)
     if (_pendingAfterStop) {
-        auto action = std::move(_pendingAfterStop);
+        auto action       = std::move(_pendingAfterStop);
         _pendingAfterStop = nullptr;
         action();
         updateSolverActions();
@@ -715,12 +717,12 @@ void MainWindow::onSolverFinished(bool success)
     }
 }
 
-void MainWindow::onRefreshTimer()
-{
-    if (!_crossword) return;
-    const Grid& g = _crossword->getGrid();
-    int rows = g.getRows();
-    int cols = g.getCols();
+void MainWindow::onRefreshTimer() {
+    if (!_crossword)
+        return;
+    const Grid& g    = _crossword->getGrid();
+    int         rows = g.getRows();
+    int         cols = g.getCols();
 
     QVector<QVector<char>> snap(rows, QVector<char>(cols));
     for (int r = 0; r < rows; ++r)
@@ -730,21 +732,22 @@ void MainWindow::onRefreshTimer()
     _gridWidget->applySnapshot(snap);
 }
 
-void MainWindow::forceStopSolver()
-{
+void MainWindow::forceStopSolver() {
     // Safe to block here: only called from destructor or before a new grid load,
     // never from inside a Qt signal delivery.
     _refreshTimer->stop();
-    if (_solverWorker) _solverWorker->requestCancel();
+    if (_solverWorker)
+        _solverWorker->requestCancel();
     if (_solverThread) {
         _solverThread->quit();
         _solverThread->wait();
-        _solverThread->deleteLater(); _solverThread = nullptr;
+        _solverThread->deleteLater();
+        _solverThread = nullptr;
     }
     if (_solverWorker) {
-        _solverWorker->deleteLater(); _solverWorker = nullptr;
+        _solverWorker->deleteLater();
+        _solverWorker = nullptr;
     }
-    _solving = false;
+    _solving          = false;
     _pendingAfterStop = nullptr;
 }
-

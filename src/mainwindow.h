@@ -1,18 +1,18 @@
 #pragma once
 
-#include <QMainWindow>
-#include <QLabel>
-#include <QListWidget>
-#include <QPushButton>
-#include <QTimer>
-#include <QThread>
-#include <functional>
-#include <memory>
-
 #include "crossword.h"
 #include "dict.h"
 #include "ui/gridwidget.h"
 #include "ui/solverworker.h"
+
+#include <QLabel>
+#include <QListWidget>
+#include <QMainWindow>
+#include <QPushButton>
+#include <QThread>
+#include <QTimer>
+#include <functional>
+#include <memory>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -61,19 +61,19 @@ private:
     void adjustWindowForGrid();
 
     // ── UI ──
-    GridWidget*   _gridWidget    = nullptr;
-    QWidget*      _gridArea      = nullptr;   // container that centres GridWidget
-    QLabel*       _statusLabel   = nullptr;
-    QLabel*       _dictLabel     = nullptr;
-    QLabel*       _editModeLabel = nullptr;
-    QPushButton*  _resumeButton  = nullptr;
-    QPushButton*  _clearButton   = nullptr;
-    QLabel*       _wordListLabel = nullptr;
-    QListWidget*  _wordList      = nullptr;
-    QAction*      _actEditMode   = nullptr;
-    QAction*      _actSolve      = nullptr;
-    QAction*      _actStop       = nullptr;
-    QAction*      _actResume     = nullptr;
+    GridWidget*  _gridWidget    = nullptr;
+    QWidget*     _gridArea      = nullptr; // container that centres GridWidget
+    QLabel*      _statusLabel   = nullptr;
+    QLabel*      _dictLabel     = nullptr;
+    QLabel*      _editModeLabel = nullptr;
+    QPushButton* _resumeButton  = nullptr;
+    QPushButton* _clearButton   = nullptr;
+    QLabel*      _wordListLabel = nullptr;
+    QListWidget* _wordList      = nullptr;
+    QAction*     _actEditMode   = nullptr;
+    QAction*     _actSolve      = nullptr;
+    QAction*     _actStop       = nullptr;
+    QAction*     _actResume     = nullptr;
 
     // ── Domain ──
     std::unique_ptr<Crossword> _crossword;
