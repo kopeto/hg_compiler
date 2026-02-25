@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+#include "paths.h"
 #include "ui/newgriddialog.h"
 
 #include <QAction>
@@ -26,8 +27,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Hitz Gurutzatuak");
     resize(900, 620);
 
-    _dict     = std::make_unique<Dict>();
-    _dictPath = HG_DEFAULT_DICTIONARY_PATH;
+    _dictPath = HG::defaultDictPath();
+    _dict     = std::make_unique<Dict>(_dictPath.toStdString());
 
     _refreshTimer = new QTimer(this);
     _refreshTimer->setInterval(250); // 4 Hz
@@ -209,7 +210,7 @@ void MainWindow::setupCentralWidget() {
 
 void MainWindow::loadDefaultGrid() {
     try {
-        _currentGridPath = HG_DEFAULT_GRID_PATH;
+        _currentGridPath = HG::defaultGridPath().toStdString();
         _crossword       = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
@@ -452,8 +453,8 @@ void MainWindow::onClearGrid() {
 
 void MainWindow::onLoadDefaultDictionary() {
     try {
-        _dictPath = HG_DEFAULT_DICTIONARY_PATH;
-        _dict     = std::make_unique<Dict>();
+        _dictPath = HG::defaultDictPath();
+        _dict     = std::make_unique<Dict>(_dictPath.toStdString());
         statusBar()->showMessage(tr("Default dictionary loaded."), 3000);
     } catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Dictionary error"), tr("Cannot load dictionary:\n%1").arg(e.what()));

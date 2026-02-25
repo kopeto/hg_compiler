@@ -68,6 +68,7 @@ target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         HG_ENABLE_TIMERS=$<IF:$<BOOL:${ENABLE_TIMERS}>,1,0>
         HG_PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        HG_ASSETS_PATH="${CMAKE_SOURCE_DIR}/assets/"
         HG_DEFAULT_DICTIONARY_PATH="${CMAKE_SOURCE_DIR}/assets/words/garbi_r_gabe.txt"
         HG_DEFAULT_GRID_PATH="${CMAKE_SOURCE_DIR}/assets/grids/basic_6x6.grid"
         HG_ENABLE_PROFILER=$<IF:$<BOOL:${ENABLE_PROFILER}>,1,0>
