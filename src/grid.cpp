@@ -136,7 +136,7 @@ Grid& Grid::operator=(const Grid& other) {
 
 void Grid::setCell(int r, int c, int value) {
     if (r >= 0 && r < _rows && c >= 0 && c < _cols)
-        _cells[r][c] = value;
+        _cells[r][c] = static_cast<char>(value);
 }
 
 void Grid::fixCell(int r, int c, char letter) {
@@ -179,7 +179,7 @@ void Grid::print() const {
     for (const auto& row : _cells) {
         std::string line{};
         for (const auto& cell : row) {
-            line += std::toupper(cell.value);
+            line += static_cast<char>(std::toupper(static_cast<unsigned char>(cell.value)));
         }
         Logger::info("{}", line);
     }
@@ -293,7 +293,7 @@ bool Grid::solve(GridWord* current_word_to_fill, std::vector<GridWord*>& _to_fil
     for (size_t i = 0; i < current_word_to_fill->length; i++) {
         Cell* cell = current_word_to_fill->cells[i];
         if (cell->horizontal_word != nullptr && cell->vertical_word != nullptr)
-            interest_indexes.push_back(i);
+            interest_indexes.push_back(static_cast<int>(i));
     }
 
     _filled.push_back(current_word_to_fill);
@@ -508,7 +508,7 @@ GridWord* Grid::getNextGridWordToFill(const std::vector<GridWord*>& _to_fill, co
             continue;
 
         // The fewer options, the higher priority — fail early
-        int count = dict.getWordsByPattern(candidate->getWord()).size();
+        int count = static_cast<int>(dict.getWordsByPattern(candidate->getWord()).size());
 
         if (count == 0)
             return candidate; // Already dead end — pick it immediately to fail fast
