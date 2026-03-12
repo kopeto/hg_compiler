@@ -58,12 +58,11 @@ PuzExportDialog::PuzExportDialog(Grid& grid, QWidget* parent) : QDialog(parent) 
                                 QAbstractItemView::AnyKeyPressed);
     _clueTable->setAlternatingRowColors(true);
     _clueTable->setShowGrid(false);
-    _clueTable->setStyleSheet(
-        "QTableWidget { border: 1px solid #c0c0c0; border-radius: 4px; }"
-        "QTableWidget::item { padding: 4px 8px; }"
-        "QHeaderView::section { background: #f0f0f0; font-weight: bold; "
-        "                       padding: 4px 8px; border: none; "
-        "                       border-bottom: 1px solid #c0c0c0; }");
+    _clueTable->setStyleSheet("QTableWidget { border: 1px solid #c0c0c0; border-radius: 4px; }"
+                              "QTableWidget::item { padding: 4px 8px; }"
+                              "QHeaderView::section { background: #f0f0f0; font-weight: bold; "
+                              "                       padding: 4px 8px; border: none; "
+                              "                       border-bottom: 1px solid #c0c0c0; }");
     buildClueTable(grid);
 
     // ── Buttons ─────────────────────────────────────────────
@@ -100,17 +99,23 @@ void PuzExportDialog::buildClueTable(Grid& grid) {
     const int cols = grid.getCols();
 
     // Collect numbered cells in reading order
-    struct Entry { int num; int r; int c; bool across; bool down; };
+    struct Entry {
+        int  num;
+        int  r;
+        int  c;
+        bool across;
+        bool down;
+    };
     std::vector<Entry> entries;
-    int num = 1;
+    int                num = 1;
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
             if (grid.getValue(r, c) == '#')
                 continue;
-            bool startsAcross = (c == 0 || grid.getValue(r, c - 1) == '#') &&
-                                (c + 1 < cols && grid.getValue(r, c + 1) != '#');
-            bool startsDown   = (r == 0 || grid.getValue(r - 1, c) == '#') &&
-                                (r + 1 < rows && grid.getValue(r + 1, c) != '#');
+            bool startsAcross =
+                (c == 0 || grid.getValue(r, c - 1) == '#') && (c + 1 < cols && grid.getValue(r, c + 1) != '#');
+            bool startsDown =
+                (r == 0 || grid.getValue(r - 1, c) == '#') && (r + 1 < rows && grid.getValue(r + 1, c) != '#');
             if (startsAcross || startsDown) {
                 entries.push_back({num++, r, c, startsAcross, startsDown});
             }
@@ -121,7 +126,8 @@ void PuzExportDialog::buildClueTable(Grid& grid) {
         GridWord* gw = nullptr;
         try {
             gw = grid.getGridWordAt(static_cast<unsigned>(r), static_cast<unsigned>(c), dir);
-        } catch (...) {}
+        } catch (...) {
+        }
         if (!gw)
             return;
 
@@ -138,8 +144,7 @@ void PuzExportDialog::buildClueTable(Grid& grid) {
         QString wordStr;
         wordStr.reserve(static_cast<int>(gw->cells.size()));
         for (const Cell* cell : gw->cells)
-            wordStr += QChar(cell->value == '_' ? '?'
-                             : static_cast<char>(std::toupper((unsigned char)cell->value)));
+            wordStr += QChar(cell->value == '_' ? '?' : static_cast<char>(std::toupper((unsigned char)cell->value)));
         auto* dirItem = new QTableWidgetItem(wordStr);
         dirItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         dirItem->setFont(QFont("Courier New", 9));

@@ -530,24 +530,26 @@ void MainWindow::onImportPuz() {
             for (int c = 0; c < cols && ci < static_cast<int>(puzData.clues.size()); ++c) {
                 if (g.getValue(r, c) == '#')
                     continue;
-                bool startsAcross = (c == 0 || g.getValue(r, c - 1) == '#') &&
-                                    (c + 1 < cols && g.getValue(r, c + 1) != '#');
-                bool startsDown = (r == 0 || g.getValue(r - 1, c) == '#') &&
-                                  (r + 1 < rows && g.getValue(r + 1, c) != '#');
+                bool startsAcross =
+                    (c == 0 || g.getValue(r, c - 1) == '#') && (c + 1 < cols && g.getValue(r, c + 1) != '#');
+                bool startsDown =
+                    (r == 0 || g.getValue(r - 1, c) == '#') && (r + 1 < rows && g.getValue(r + 1, c) != '#');
                 if (startsAcross) {
                     try {
-                        if (GridWord* gw = g.getGridWordAt(
-                                static_cast<unsigned>(r), static_cast<unsigned>(c), GridWordDirection::ACROSS))
+                        if (GridWord* gw = g.getGridWordAt(static_cast<unsigned>(r), static_cast<unsigned>(c),
+                                                           GridWordDirection::ACROSS))
                             gw->setClue(Clue(puzData.clues[ci]));
-                    } catch (...) {}
+                    } catch (...) {
+                    }
                     ++ci;
                 }
                 if (startsDown && ci < static_cast<int>(puzData.clues.size())) {
                     try {
-                        if (GridWord* gw = g.getGridWordAt(
-                                static_cast<unsigned>(r), static_cast<unsigned>(c), GridWordDirection::DOWN))
+                        if (GridWord* gw = g.getGridWordAt(static_cast<unsigned>(r), static_cast<unsigned>(c),
+                                                           GridWordDirection::DOWN))
                             gw->setClue(Clue(puzData.clues[ci]));
-                    } catch (...) {}
+                    } catch (...) {
+                    }
                     ++ci;
                 }
             }
