@@ -1,5 +1,6 @@
 #include "grid_word.h"
 
+#include "Clue.h"
 #include "cell.h"
 
 GridWord::GridWord(GridWordDirection dir, unsigned int r, unsigned int c, unsigned int len)
@@ -54,6 +55,14 @@ void GridWord::unset() {
 
 bool GridWord::isSet() const {
     return _is_word_set;
+}
+
+Clue* GridWord::getClue() const {
+    return _clue;
+}
+
+void GridWord::setClue(Clue* clue) {
+    _clue = clue;
 }
 
 bool GridWord::isFullyFixed() const {

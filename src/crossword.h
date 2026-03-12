@@ -20,6 +20,8 @@ struct Crossword {
 
     const std::vector<GridWord>& getGridDownWords() const;
 
+    const std::vector<GridWord>& getGridWords() const;
+
     Grid& getGrid();
 
 private:

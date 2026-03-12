@@ -8,6 +8,7 @@
 #include <vector>
 
 struct Cell;
+struct Clue;
 
 enum class GridWordDirection { ACROSS, DOWN };
 
@@ -45,6 +46,9 @@ struct GridWord {
      */
     bool isFullyFixed() const;
 
+    Clue* getClue() const;
+    void  setClue(Clue* clue);
+
 public:
     std::vector<Cell*> cells{}; // Pointers to the cells that make up this grid word
     GridWordDirection  direction;
@@ -57,4 +61,5 @@ private:
     int         _starting_row;       // Starting row of the grid word
     int         _starting_col;       // Starting column of the grid word
     bool        _is_word_set{false}; // Flag to indicate if the current string is set or not
+    Clue*       _clue{nullptr};      // Associated clue for this grid word
 };
