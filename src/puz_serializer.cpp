@@ -38,7 +38,11 @@ static std::string readNulStr(const QByteArray& buf, int& pos) {
 //  Export
 // ─────────────────────────────────────────────────────────────────────────────
 
-QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const std::string& defaultClue) {
+QString PuzSerializer::exportToFile(const Grid& grid, const QString& path,
+                                    const std::string& title,
+                                    const std::string& author,
+                                    const std::string& copyright,
+                                    const std::string& defaultClue) {
     const int rows = grid.getRows();
     const int cols = grid.getCols();
 
@@ -134,9 +138,9 @@ QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const
     file.write(reinterpret_cast<const char*>(header), 52);
     file.write(solution.data(), static_cast<qint64>(solution.size()));
     file.write(playerState.data(), static_cast<qint64>(playerState.size()));
-    writeNul(""); // title
-    writeNul(""); // author
-    writeNul(""); // copyright
+    writeNul(title);     // title
+    writeNul(author);    // author
+    writeNul(copyright); // copyright
     for (const auto& cl : clueList)
         writeNul(cl);
     writeNul(""); // notes

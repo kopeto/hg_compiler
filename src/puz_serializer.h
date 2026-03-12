@@ -30,6 +30,9 @@ public:
     // defaultClue is used for every clue since we have no clue data yet.
     // Returns an empty string on success, or an error message on failure.
     static QString exportToFile(const Grid& grid, const QString& path,
+                                const std::string& title     = {},
+                                const std::string& author    = {},
+                                const std::string& copyright = {},
                                 const std::string& defaultClue = "Ez dago pistarik");
 
     // Import a .puz file.  Check PuzData::errorMessage for errors.

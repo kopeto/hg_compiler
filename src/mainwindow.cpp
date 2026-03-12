@@ -3,6 +3,7 @@
 #include "paths.h"
 #include "puz_serializer.h"
 #include "ui/newgriddialog.h"
+#include "ui/puzexportdialog.h"
 
 #include <QAction>
 #include <QApplication>
@@ -420,11 +421,22 @@ void MainWindow::onExportPuz() {
         return;
     }
 
-    QString path = QFileDialog::getSaveFileName(this, tr("Export as .puz"), QString(), tr("Across Lite (*.puz)"));
-    if (path.isEmpty())
+    PuzExportDialog dlg(this);
+    if (dlg.exec() != QDialog::Accepted)
         return;
 
-    QString err = PuzSerializer::exportToFile(_crossword->getGrid(), path);
+    QString path = dlg.filePath();
+    if (path.isEmpty()) {
+        QMessageBox::warning(this, tr("Export"), tr("Ez da fitxategi-bidarik hautatu."));
+        return;
+    }
+
+    QString err = PuzSerializer::exportToFile(
+        _crossword->getGrid(), path,
+        dlg.title().toStdString(),
+        dlg.author().toStdString(),
+        dlg.copyright().toStdString());
+
     if (!err.isEmpty())
         QMessageBox::critical(this, tr("Export Error"), err);
     else
