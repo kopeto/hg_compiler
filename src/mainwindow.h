@@ -24,6 +24,8 @@ private slots:
     void onNewBlankGrid();
     void onOpenGrid();
     void onSaveGrid();
+    void onExportPuz();
+    void onImportPuz();
     void onToggleEditMode(bool checked);
 
     void onLoadDefaultDictionary();

@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "paths.h"
+#include "puz_serializer.h"
 #include "ui/newgriddialog.h"
 
 #include <QAction>
@@ -48,6 +49,14 @@ MainWindow::~MainWindow() {
 void MainWindow::setupMenuBar() {
     // ── File ──
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+
+    QAction* actImport = fileMenu->addAction(tr("&Import .puz…"));
+    connect(actImport, &QAction::triggered, this, &MainWindow::onImportPuz);
+
+    QAction* actExport = fileMenu->addAction(tr("&Export as .puz…"));
+    connect(actExport, &QAction::triggered, this, &MainWindow::onExportPuz);
+
+    fileMenu->addSeparator();
 
     QAction* actQuit = fileMenu->addAction(tr("&Quit"));
     actQuit->setShortcut(QKeySequence::Quit);
@@ -230,31 +239,6 @@ void MainWindow::onCellFixed(int row, int col, char letter, bool fixed) {
         g.fixCell(row, col, letter);
     } else {
         g.unfixCell(row, col);
-
-        // Fix every non-empty non-fixed letter in the words crossing this cell
-        // so the solver treats them as hard constraints.
-        auto applyFix = [&](GridWord* gw) {
-            if (!gw)
-                return;
-            auto [startR, startC] = gw->getPosition();
-            for (int i = 0; i < (int)gw->length; ++i) {
-                int   r    = (gw->direction == GridWordDirection::ACROSS) ? startR : startR + i;
-                int   c    = (gw->direction == GridWordDirection::ACROSS) ? startC + i : startC;
-                Cell* cell = gw->cells[i];
-                if (!cell->fixed && cell->value != '_') {
-                    g.fixCell(r, c, cell->value);
-                    _gridWidget->setCellFixed(r, c, cell->value);
-                }
-            }
-        };
-        try {
-            applyFix(g.getGridWordAt(row, col, GridWordDirection::ACROSS));
-        } catch (...) {
-        }
-        try {
-            applyFix(g.getGridWordAt(row, col, GridWordDirection::DOWN));
-        } catch (...) {
-        }
     }
 
     // Refresh the candidate list — letters changed
@@ -426,6 +410,49 @@ void MainWindow::onSaveGrid() {
         out << '\n';
     }
     statusBar()->showMessage(tr("Grid saved: %1").arg(path));
+}
+
+// ── Export .puz ─────────────────────────────────────────────
+
+void MainWindow::onExportPuz() {
+    if (!_crossword) {
+        QMessageBox::warning(this, tr("Export"), tr("No grid loaded."));
+        return;
+    }
+
+    QString path = QFileDialog::getSaveFileName(
+        this, tr("Export as .puz"), QString(), tr("Across Lite (*.puz)"));
+    if (path.isEmpty())
+        return;
+
+    QString err = PuzSerializer::exportToFile(_crossword->getGrid(), path);
+    if (!err.isEmpty())
+        QMessageBox::critical(this, tr("Export Error"), err);
+    else
+        statusBar()->showMessage(tr("Exported: %1").arg(QFileInfo(path).fileName()));
+}
+
+void MainWindow::onImportPuz() {
+    QString path = QFileDialog::getOpenFileName(
+        this, tr("Import .puz"), QString(), tr("Across Lite (*.puz)"));
+    if (path.isEmpty())
+        return;
+
+    PuzData puzData = PuzSerializer::importFromFile(path);
+    if (!puzData.errorMessage.isEmpty()) {
+        QMessageBox::critical(this, tr("Import Error"), puzData.errorMessage);
+        return;
+    }
+
+    auto lines = PuzSerializer::toGridLines(puzData);
+
+    forceStopSolver();
+    _crossword   = std::make_unique<Crossword>(lines);
+    _currentGridPath.clear();
+    _gridWidget->loadFromGrid(_crossword->getGrid());
+    adjustWindowForGrid();
+    updateWordList(-1, -1, GridWordDirection::ACROSS);
+    statusBar()->showMessage(tr("Imported: %1").arg(QFileInfo(path).fileName()));
 }
 
 // ── Dictionary slots ─────────────────────────────────────────
