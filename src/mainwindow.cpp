@@ -420,8 +420,7 @@ void MainWindow::onExportPuz() {
         return;
     }
 
-    QString path = QFileDialog::getSaveFileName(
-        this, tr("Export as .puz"), QString(), tr("Across Lite (*.puz)"));
+    QString path = QFileDialog::getSaveFileName(this, tr("Export as .puz"), QString(), tr("Across Lite (*.puz)"));
     if (path.isEmpty())
         return;
 
@@ -433,8 +432,7 @@ void MainWindow::onExportPuz() {
 }
 
 void MainWindow::onImportPuz() {
-    QString path = QFileDialog::getOpenFileName(
-        this, tr("Import .puz"), QString(), tr("Across Lite (*.puz)"));
+    QString path = QFileDialog::getOpenFileName(this, tr("Import .puz"), QString(), tr("Across Lite (*.puz)"));
     if (path.isEmpty())
         return;
 
@@ -447,7 +445,7 @@ void MainWindow::onImportPuz() {
     auto lines = PuzSerializer::toGridLines(puzData);
 
     forceStopSolver();
-    _crossword   = std::make_unique<Crossword>(lines);
+    _crossword = std::make_unique<Crossword>(lines);
     _currentGridPath.clear();
     _gridWidget->loadFromGrid(_crossword->getGrid());
     adjustWindowForGrid();

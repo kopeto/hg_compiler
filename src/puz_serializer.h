@@ -8,8 +8,8 @@
 
 // Data extracted from a .puz file
 struct PuzData {
-    int  rows = 0;
-    int  cols = 0;
+    int rows = 0;
+    int cols = 0;
 
     // One string per row, length == cols.
     // '.' = black cell, letter = filled cell, '-' = empty white cell.
@@ -29,8 +29,7 @@ public:
     // Export grid to a .puz file.
     // defaultClue is used for every clue since we have no clue data yet.
     // Returns an empty string on success, or an error message on failure.
-    static QString exportToFile(const Grid&  grid,
-                                const QString& path,
+    static QString exportToFile(const Grid& grid, const QString& path,
                                 const std::string& defaultClue = "Ez dago pistarik");
 
     // Import a .puz file.  Check PuzData::errorMessage for errors.

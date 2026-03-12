@@ -1,7 +1,6 @@
 #include "puz_serializer.h"
 
 #include <QFile>
-
 #include <cctype>
 #include <cstdint>
 #include <cstring>
@@ -10,25 +9,24 @@
 //  Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-static uint16_t puzCksum(const uint8_t* data, size_t len, uint16_t cksum = 0)
-{
+static uint16_t puzCksum(const uint8_t* data, size_t len, uint16_t cksum = 0) {
     for (size_t i = 0; i < len; ++i) {
-        if (cksum & 1) cksum = static_cast<uint16_t>((cksum >> 1) | 0x8000u);
-        else           cksum = static_cast<uint16_t>(cksum >> 1);
+        if (cksum & 1)
+            cksum = static_cast<uint16_t>((cksum >> 1) | 0x8000u);
+        else
+            cksum = static_cast<uint16_t>(cksum >> 1);
         cksum = static_cast<uint16_t>(cksum + data[i]);
     }
     return cksum;
 }
 
-static uint16_t cksumStr(const std::string& s, uint16_t c)
-{
+static uint16_t cksumStr(const std::string& s, uint16_t c) {
     return puzCksum(reinterpret_cast<const uint8_t*>(s.data()), s.size(), c);
 }
 
 // Read a null-terminated string from raw bytes starting at pos.
 // Advances pos past the null terminator.
-static std::string readNulStr(const QByteArray& buf, int& pos)
-{
+static std::string readNulStr(const QByteArray& buf, int& pos) {
     std::string result;
     while (pos < buf.size() && buf[pos] != '\0')
         result += buf[pos++];
@@ -40,10 +38,7 @@ static std::string readNulStr(const QByteArray& buf, int& pos)
 //  Export
 // ─────────────────────────────────────────────────────────────────────────────
 
-QString PuzSerializer::exportToFile(const Grid&        grid,
-                                     const QString&     path,
-                                     const std::string& defaultClue)
-{
+QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const std::string& defaultClue) {
     const int rows = grid.getRows();
     const int cols = grid.getCols();
 
@@ -70,12 +65,14 @@ QString PuzSerializer::exportToFile(const Grid&        grid,
         for (int c = 0; c < cols; ++c) {
             if (grid.getValue(r, c) == '#')
                 continue;
-            bool startsAcross = (c == 0 || grid.getValue(r, c - 1) == '#') &&
-                                (c + 1 < cols && grid.getValue(r, c + 1) != '#');
-            bool startsDown   = (r == 0 || grid.getValue(r - 1, c) == '#') &&
-                                (r + 1 < rows && grid.getValue(r + 1, c) != '#');
-            if (startsAcross) clueList.push_back(defaultClue);
-            if (startsDown)   clueList.push_back(defaultClue);
+            bool startsAcross =
+                (c == 0 || grid.getValue(r, c - 1) == '#') && (c + 1 < cols && grid.getValue(r, c + 1) != '#');
+            bool startsDown =
+                (r == 0 || grid.getValue(r - 1, c) == '#') && (r + 1 < rows && grid.getValue(r + 1, c) != '#');
+            if (startsAcross)
+                clueList.push_back(defaultClue);
+            if (startsDown)
+                clueList.push_back(defaultClue);
         }
     }
 
@@ -83,12 +80,14 @@ QString PuzSerializer::exportToFile(const Grid&        grid,
 
     // ── CIB ──────────────────────────────────────────────────────
     uint8_t cib[8] = {};
-    cib[0] = static_cast<uint8_t>(cols);
-    cib[1] = static_cast<uint8_t>(rows);
-    cib[2] = numClues & 0xFF;
-    cib[3] = (numClues >> 8) & 0xFF;
-    cib[4] = 0x01; cib[5] = 0x00;
-    cib[6] = 0x00; cib[7] = 0x00;
+    cib[0]         = static_cast<uint8_t>(cols);
+    cib[1]         = static_cast<uint8_t>(rows);
+    cib[2]         = numClues & 0xFF;
+    cib[3]         = (numClues >> 8) & 0xFF;
+    cib[4]         = 0x01;
+    cib[5]         = 0x00;
+    cib[6]         = 0x00;
+    cib[7]         = 0x00;
 
     // ── Checksums ─────────────────────────────────────────────────
     uint16_t c_cib  = puzCksum(cib, 8);
@@ -99,24 +98,24 @@ QString PuzSerializer::exportToFile(const Grid&        grid,
         c_part = cksumStr(cl, c_part);
 
     uint16_t overall = c_cib;
-    overall = cksumStr(solution, overall);
-    overall = cksumStr(playerState, overall);
+    overall          = cksumStr(solution, overall);
+    overall          = cksumStr(playerState, overall);
     for (const auto& cl : clueList)
         overall = cksumStr(cl, overall);
 
     // ── Header ────────────────────────────────────────────────────
     uint8_t header[52] = {};
-    header[0x00] = overall & 0xFF;
-    header[0x01] = (overall >> 8) & 0xFF;
+    header[0x00]       = overall & 0xFF;
+    header[0x01]       = (overall >> 8) & 0xFF;
     std::memcpy(header + 0x02, "ACROSS&DOWN\0", 12);
     header[0x0E] = c_cib & 0xFF;
     header[0x0F] = (c_cib >> 8) & 0xFF;
-    header[0x10] = static_cast<uint8_t>('I' ^ (c_cib  & 0xFF));
-    header[0x11] = static_cast<uint8_t>('C' ^ (c_sol  & 0xFF));
+    header[0x10] = static_cast<uint8_t>('I' ^ (c_cib & 0xFF));
+    header[0x11] = static_cast<uint8_t>('C' ^ (c_sol & 0xFF));
     header[0x12] = static_cast<uint8_t>('H' ^ (c_grid & 0xFF));
     header[0x13] = static_cast<uint8_t>('E' ^ (c_part & 0xFF));
-    header[0x14] = static_cast<uint8_t>('A' ^ ((c_cib  >> 8) & 0xFF));
-    header[0x15] = static_cast<uint8_t>('T' ^ ((c_sol  >> 8) & 0xFF));
+    header[0x14] = static_cast<uint8_t>('A' ^ ((c_cib >> 8) & 0xFF));
+    header[0x15] = static_cast<uint8_t>('T' ^ ((c_sol >> 8) & 0xFF));
     header[0x16] = static_cast<uint8_t>('E' ^ ((c_grid >> 8) & 0xFF));
     header[0x17] = static_cast<uint8_t>('D' ^ ((c_part >> 8) & 0xFF));
     std::memcpy(header + 0x18, "1.3\0", 4);
@@ -133,7 +132,7 @@ QString PuzSerializer::exportToFile(const Grid&        grid,
     };
 
     file.write(reinterpret_cast<const char*>(header), 52);
-    file.write(solution.data(),    static_cast<qint64>(solution.size()));
+    file.write(solution.data(), static_cast<qint64>(solution.size()));
     file.write(playerState.data(), static_cast<qint64>(playerState.size()));
     writeNul(""); // title
     writeNul(""); // author
@@ -150,8 +149,7 @@ QString PuzSerializer::exportToFile(const Grid&        grid,
 //  Import
 // ─────────────────────────────────────────────────────────────────────────────
 
-PuzData PuzSerializer::importFromFile(const QString& path)
-{
+PuzData PuzSerializer::importFromFile(const QString& path) {
     PuzData data;
 
     QFile file(path);
@@ -177,9 +175,9 @@ PuzData PuzSerializer::importFromFile(const QString& path)
     data.cols = static_cast<uint8_t>(buf[0x2C]);
     data.rows = static_cast<uint8_t>(buf[0x2D]);
 
-    const int cellCount = data.rows * data.cols;
-    const int solOffset = 0x34;
-    const int stateOffset = solOffset + cellCount;
+    const int cellCount     = data.rows * data.cols;
+    const int solOffset     = 0x34;
+    const int stateOffset   = solOffset + cellCount;
     const int stringsOffset = stateOffset + cellCount;
 
     if (buf.size() < stringsOffset) {
@@ -196,14 +194,13 @@ PuzData PuzSerializer::importFromFile(const QString& path)
     }
 
     // Text strings
-    int pos = stringsOffset;
+    int pos        = stringsOffset;
     data.title     = readNulStr(buf, pos);
     data.author    = readNulStr(buf, pos);
     data.copyright = readNulStr(buf, pos);
 
     const uint16_t numClues =
-        static_cast<uint16_t>(static_cast<uint8_t>(buf[0x2E]) |
-                              (static_cast<uint8_t>(buf[0x2F]) << 8));
+        static_cast<uint16_t>(static_cast<uint8_t>(buf[0x2E]) | (static_cast<uint8_t>(buf[0x2F]) << 8));
     data.clues.reserve(numClues);
     for (uint16_t i = 0; i < numClues && pos < buf.size(); ++i)
         data.clues.push_back(readNulStr(buf, pos));
@@ -218,8 +215,7 @@ PuzData PuzSerializer::importFromFile(const QString& path)
 //  Conversion helper
 // ─────────────────────────────────────────────────────────────────────────────
 
-std::vector<std::string> PuzSerializer::toGridLines(const PuzData& data)
-{
+std::vector<std::string> PuzSerializer::toGridLines(const PuzData& data) {
     std::vector<std::string> lines;
     lines.reserve(data.rows);
     for (int r = 0; r < data.rows; ++r) {
