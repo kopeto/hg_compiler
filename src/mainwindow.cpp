@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+#include "clue.h"
 #include "paths.h"
 #include "puz_serializer.h"
 #include "ui/newgriddialog.h"
@@ -12,6 +13,7 @@
 #include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
@@ -210,6 +212,16 @@ void MainWindow::setupCentralWidget() {
     connect(_wordList, &QListWidget::itemDoubleClicked, this, &MainWindow::onWordListDoubleClicked);
     rightLayout->addWidget(_wordList, /*stretch=*/1);
 
+    auto* clueLabel = new QLabel(tr("Pista:"), rightPanel);
+    clueLabel->setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 4px;");
+    rightLayout->addWidget(clueLabel);
+
+    _clueEdit = new QLineEdit(rightPanel);
+    _clueEdit->setPlaceholderText(tr("Idatzi pista hemen\u2026"));
+    _clueEdit->setEnabled(false);
+    rightLayout->addWidget(_clueEdit);
+    connect(_clueEdit, &QLineEdit::textEdited, this, &MainWindow::onClueChanged);
+
     mainLayout->addWidget(rightPanel, /*stretch=*/1);
 
     setCentralWidget(centralWidget);
@@ -222,6 +234,7 @@ void MainWindow::loadDefaultGrid() {
     try {
         _currentGridPath = HG::defaultGridPath().toStdString();
         _crossword       = std::make_unique<Crossword>(_currentGridPath);
+
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
         // Always start in edit mode
@@ -254,14 +267,35 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir) {
     if (!_wordList)
         return;
     _wordList->clear();
-    if (!_crossword || !_dict || row < 0) {
-        _wordListLabel->setText(tr("Candidates:"));
-        return;
+
+    // Resolve the GridWord for this cell (independent of dict)
+    GridWord* gw = nullptr;
+    if (_crossword && row >= 0) {
+        try {
+            gw = _crossword->getGrid().getGridWordAt(static_cast<unsigned>(row), static_cast<unsigned>(col), dir);
+        } catch (...) {
+            gw = nullptr;
+        }
     }
 
-    const Grid& g  = _crossword->getGrid();
-    GridWord*   gw = g.getGridWordAt(row, col, dir);
-    if (!gw) {
+    // ── Clue edit: enable/populate whenever we have a GridWord ──
+    if (_clueEdit) {
+        if (gw) {
+            Clue* clue = gw->getClue();
+            _clueEdit->blockSignals(true);
+            _clueEdit->setText(clue ? QString::fromStdString(clue->getClueText()) : QString());
+            _clueEdit->blockSignals(false);
+            _clueEdit->setEnabled(true);
+        } else {
+            _clueEdit->blockSignals(true);
+            _clueEdit->clear();
+            _clueEdit->blockSignals(false);
+            _clueEdit->setEnabled(false);
+        }
+    }
+
+    // ── Candidate list: also needs a dict ──
+    if (!_crossword || !_dict || !gw || row < 0) {
         _wordListLabel->setText(tr("Candidates:"));
         return;
     }
@@ -318,6 +352,30 @@ void MainWindow::onWordListDoubleClicked(QListWidgetItem* item) {
 
     // Refresh candidate list to reflect the new (fully fixed) pattern
     updateWordList(row, col, dir);
+}
+
+void MainWindow::onClueChanged() {
+    if (!_crossword)
+        return;
+    int               row = _gridWidget->selectedRow();
+    int               col = _gridWidget->selectedCol();
+    GridWordDirection dir = _gridWidget->selectedDir();
+    if (row < 0)
+        return;
+    GridWord* gw = nullptr;
+    try {
+        gw = _crossword->getGrid().getGridWordAt(static_cast<unsigned>(row), static_cast<unsigned>(col), dir);
+    } catch (...) {
+        return;
+    }
+    if (!gw)
+        return;
+    std::string text = _clueEdit->text().toStdString();
+    if (Clue* clue = gw->getClue()) {
+        clue->setClueText(text);
+    } else {
+        gw->setClue(Clue(text));
+    }
 }
 
 // ── Grid slots ────────────────────────────────────────────────
@@ -458,6 +516,41 @@ void MainWindow::onImportPuz() {
     _currentGridPath.clear();
     _gridWidget->loadFromGrid(_crossword->getGrid());
     adjustWindowForGrid();
+
+    // Map the imported clue list onto the GridWords (same reading order as export)
+    {
+        Grid&     g    = _crossword->getGrid();
+        const int rows = g.getRows();
+        const int cols = g.getCols();
+        int       ci   = 0;
+        for (int r = 0; r < rows && ci < static_cast<int>(puzData.clues.size()); ++r) {
+            for (int c = 0; c < cols && ci < static_cast<int>(puzData.clues.size()); ++c) {
+                if (g.getValue(r, c) == '#')
+                    continue;
+                bool startsAcross = (c == 0 || g.getValue(r, c - 1) == '#') &&
+                                    (c + 1 < cols && g.getValue(r, c + 1) != '#');
+                bool startsDown = (r == 0 || g.getValue(r - 1, c) == '#') &&
+                                  (r + 1 < rows && g.getValue(r + 1, c) != '#');
+                if (startsAcross) {
+                    try {
+                        if (GridWord* gw = g.getGridWordAt(
+                                static_cast<unsigned>(r), static_cast<unsigned>(c), GridWordDirection::ACROSS))
+                            gw->setClue(Clue(puzData.clues[ci]));
+                    } catch (...) {}
+                    ++ci;
+                }
+                if (startsDown && ci < static_cast<int>(puzData.clues.size())) {
+                    try {
+                        if (GridWord* gw = g.getGridWordAt(
+                                static_cast<unsigned>(r), static_cast<unsigned>(c), GridWordDirection::DOWN))
+                            gw->setClue(Clue(puzData.clues[ci]));
+                    } catch (...) {}
+                    ++ci;
+                }
+            }
+        }
+    }
+
     updateWordList(-1, -1, GridWordDirection::ACROSS);
     statusBar()->showMessage(tr("Imported: %1").arg(QFileInfo(path).fileName()));
 }

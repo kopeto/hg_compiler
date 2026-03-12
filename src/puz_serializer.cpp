@@ -62,6 +62,13 @@ QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const
     }
 
     // ── Clue list (reading order: across then down per numbered cell) ─
+    auto clueText = [&](GridWordDirection dir, int r, int c) -> std::string {
+        const GridWord* gw = grid.getGridWordAt(static_cast<unsigned>(r), static_cast<unsigned>(c), dir);
+        if (gw && gw->getClue() && !gw->getClue()->getClueText().empty())
+            return gw->getClue()->getClueText();
+        return defaultClue;
+    };
+
     std::vector<std::string> clueList;
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
@@ -72,9 +79,9 @@ QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const
             bool startsDown =
                 (r == 0 || grid.getValue(r - 1, c) == '#') && (r + 1 < rows && grid.getValue(r + 1, c) != '#');
             if (startsAcross)
-                clueList.push_back(defaultClue);
+                clueList.push_back(clueText(GridWordDirection::ACROSS, r, c));
             if (startsDown)
-                clueList.push_back(defaultClue);
+                clueList.push_back(clueText(GridWordDirection::DOWN, r, c));
         }
     }
 

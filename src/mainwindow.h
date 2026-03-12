@@ -6,6 +6,7 @@
 #include "ui/solverworker.h"
 
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMainWindow>
 #include <QPushButton>
@@ -42,6 +43,7 @@ private slots:
     void onCellFixed(int row, int col, char letter, bool fixed);
     void onSelectionChanged(int row, int col, GridWordDirection dir);
     void onWordListDoubleClicked(QListWidgetItem* item);
+    void onClueChanged();
 
     // Activated by GridWidget::interactionRequested (DirectConnection).
     // Sets cancel flag; queues a pending action to run once the solver stops.
@@ -72,16 +74,17 @@ private:
     QPushButton* _clearButton   = nullptr;
     QLabel*      _wordListLabel = nullptr;
     QListWidget* _wordList      = nullptr;
+    QLineEdit*   _clueEdit      = nullptr;
     QAction*     _actEditMode   = nullptr;
     QAction*     _actSolve      = nullptr;
     QAction*     _actStop       = nullptr;
     QAction*     _actResume     = nullptr;
 
     // ── Domain ──
-    std::unique_ptr<Crossword> _crossword;
-    std::unique_ptr<Dict>      _dict;
-    std::string                _currentGridPath;
-    QString                    _dictPath;
+    std::unique_ptr<Crossword>              _crossword;
+    std::unique_ptr<Dict>                   _dict;
+    std::string                             _currentGridPath;
+    QString                                 _dictPath;
 
     // ── Solver thread ──
     QThread*      _solverThread = nullptr;
