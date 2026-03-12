@@ -21,6 +21,12 @@ set DEPLOY_DIR=%~dp0deploy
 set WINDEPLOYQT=%QT6_DIR%\bin\windeployqt.exe
 set CMAKE_PREFIX_PATH=%QT6_DIR%
 
+:: ── Parse arguments ────────────────────────────────────────────────────────
+set BUILD_INSTALLER=0
+for %%A in (%*) do (
+    if /i "%%A"=="--installer" set BUILD_INSTALLER=1
+)
+
 :: ── Verify tools ────────────────────────────────────────────────────────────
 where cmake >nul 2>&1 || (echo [ERROR] cmake not found in PATH. & exit /b 1)
 where msbuild >nul 2>&1 || where ninja >nul 2>&1 || (
@@ -58,16 +64,20 @@ xcopy /y /s /e "%~dp0assets" "%DEPLOY_DIR%\assets\"
 if errorlevel 1 (echo [ERROR] windeployqt failed. & exit /b 1)
 
 echo.
-echo == 4/4  Create NSIS installer =================================================
-:: CPack runs cmake --install internally (which also calls windeployqt) and then
-:: packages everything. No need to call cmake --install manually here.
-pushd "%BUILD_DIR%"
-cpack -G NSIS -C Release
-if errorlevel 1 (echo [ERROR] CPack/NSIS failed. Make sure NSIS is installed and makensis.exe is in PATH. & popd & exit /b 1)
-popd
+if "%BUILD_INSTALLER%"=="1" (
+    echo == 4/4  Create NSIS installer =================================================
+    :: CPack runs cmake --install internally (which also calls windeployqt) and then
+    :: packages everything. No need to call cmake --install manually here.
+    pushd "%BUILD_DIR%"
+    cpack -G NSIS -C Release
+    if errorlevel 1 (echo [ERROR] CPack/NSIS failed. Make sure NSIS is installed and makensis.exe is in PATH. & popd & exit /b 1)
+    popd
+) else (
+    echo == 4/4  Skipping NSIS installer ^(pass --installer to build it^) ===============
+)
 
 echo.
 echo == Done =======================================================================
-echo Installer can be found in: %BUILD_DIR%\
+if "%BUILD_INSTALLER%"=="1" echo Installer can be found in: %BUILD_DIR%\
 echo Deploy folder:             %DEPLOY_DIR%\
 echo.

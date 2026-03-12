@@ -25,6 +25,9 @@ option(ENABLE_PROFILER "Enable function profiling" OFF)
 # Threads (link now, useful if needed later)
 find_package(Threads REQUIRED)
 
+# Suppress Qt's internal Vulkan search (not needed for this project)
+set(CMAKE_DISABLE_FIND_PACKAGE_WrapVulkanHeaders TRUE)
+
 # Find and link Qt6
 set(CMAKE_AUTOMOC ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
