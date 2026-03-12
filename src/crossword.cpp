@@ -36,15 +36,13 @@ const std::vector<GridWord>& Crossword::getGridDownWords() const {
 }
 
 const std::vector<GridWord>& Crossword::getGridWords() const {
-    static std::vector<GridWord> allWords;
-    if (allWords.empty()) {
-        const auto& across = _grid.getAcrossWords();
-        const auto& down   = _grid.getDownWords();
-        allWords.reserve(across.size() + down.size());
-        allWords.insert(allWords.end(), across.begin(), across.end());
-        allWords.insert(allWords.end(), down.begin(), down.end());
-    }
-    return allWords;
+    _allWords.clear();
+    const auto& across = _grid.getAcrossWords();
+    const auto& down   = _grid.getDownWords();
+    _allWords.reserve(across.size() + down.size());
+    _allWords.insert(_allWords.end(), across.begin(), across.end());
+    _allWords.insert(_allWords.end(), down.begin(), down.end());
+    return _allWords;
 }
 
 Grid& Crossword::getGrid() {

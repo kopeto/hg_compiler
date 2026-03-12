@@ -1,9 +1,8 @@
 #include "grid_word.h"
 
-#include "Clue.h"
 #include "cell.h"
 
-GridWord::GridWord(GridWordDirection dir, unsigned int r, unsigned int c, unsigned int len)
+GridWord::GridWord(GridWordDirection dir, unsigned int r, unsigned int c, size_t len)
     : direction(dir), length(len), _str(len, '_'), _starting_row(r), _starting_col(c) {}
 
 void GridWord::addCell(Cell* cell) {
@@ -58,11 +57,19 @@ bool GridWord::isSet() const {
 }
 
 Clue* GridWord::getClue() const {
-    return _clue;
+    return _clue.has_value() ? const_cast<Clue*>(&_clue.value()) : nullptr;
 }
 
-void GridWord::setClue(Clue* clue) {
-    _clue = clue;
+void GridWord::setClue(Clue clue) {
+    _clue = std::move(clue);
+}
+
+void GridWord::setClue(const std::string& clueText) {
+    if (!_clue.has_value()) {
+        _clue = Clue(clueText);
+    } else {
+        _clue->setClueText(clueText);
+    }
 }
 
 bool GridWord::isFullyFixed() const {

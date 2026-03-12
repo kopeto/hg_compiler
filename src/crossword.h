@@ -28,4 +28,5 @@ private:
     int  _width;
     int  _height;
     Grid _grid;
+    mutable std::vector<GridWord> _allWords;
 };

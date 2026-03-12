@@ -1,13 +1,13 @@
 #include "clue.h"
 
-Clue::Clue(const std::string& clueText, const std::string& answer) : _clueText(clueText), _answer(answer) {}
+Clue::Clue(const std::string& clueText) : _clueText(clueText) {}
 
 const std::string& Clue::getClueText() const {
     return _clueText;
 }
 
-const std::string& Clue::getAnswer() const {
-    return _answer;
+void Clue::setClueText(const std::string& text) {
+    _clueText = text;
 }
 
 GridWord* Clue::getGridWord() const {

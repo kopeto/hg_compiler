@@ -1,20 +1,21 @@
 #pragma once
 
+#include "clue.h"
 #include "word.h"
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 struct Cell;
-struct Clue;
 
 enum class GridWordDirection { ACROSS, DOWN };
 
 struct GridWord {
 
-    GridWord(GridWordDirection dir, unsigned int r, unsigned int c, unsigned int len);
+    GridWord(GridWordDirection dir, unsigned int r, unsigned int c, size_t len);
 
     void addCell(Cell* cell);
 
@@ -47,7 +48,8 @@ struct GridWord {
     bool isFullyFixed() const;
 
     Clue* getClue() const;
-    void  setClue(Clue* clue);
+    void  setClue(Clue clue);
+    void  setClue(const std::string& clueText);
 
 public:
     std::vector<Cell*> cells{}; // Pointers to the cells that make up this grid word
@@ -57,9 +59,9 @@ public:
         possible_words{}; // Possible words that can fit in this grid word based on the current state of the grid
 
 private:
-    std::string _str;                // The current string formed by the cells in this grid word
-    int         _starting_row;       // Starting row of the grid word
-    int         _starting_col;       // Starting column of the grid word
-    bool        _is_word_set{false}; // Flag to indicate if the current string is set or not
-    Clue*       _clue{nullptr};      // Associated clue for this grid word
+    std::string         _str;          // The current string formed by the cells in this grid word
+    int                 _starting_row; // Starting row of the grid word
+    int                 _starting_col; // Starting column of the grid word
+    bool                _is_word_set{false};
+    std::optional<Clue> _clue;
 };
