@@ -14,9 +14,9 @@ class PuzExportDialog : public QDialog {
 public:
     explicit PuzExportDialog(QWidget* parent = nullptr);
 
-    QString filePath()  const;
-    QString title()     const;
-    QString author()    const;
+    QString filePath() const;
+    QString title() const;
+    QString author() const;
     QString copyright() const;
 
 private slots:

@@ -15,10 +15,10 @@ PuzExportDialog::PuzExportDialog(QWidget* parent) : QDialog(parent) {
     auto* form = new QFormLayout;
 
     // ── File path row ──────────────────────────────────────
-    auto* pathRow    = new QHBoxLayout;
-    _pathEdit        = new QLineEdit(this);
+    auto* pathRow = new QHBoxLayout;
+    _pathEdit     = new QLineEdit(this);
     _pathEdit->setPlaceholderText(tr("Aukeratu fitxategia…"));
-    auto* browseBtn  = new QPushButton(tr("Browse…"), this);
+    auto* browseBtn = new QPushButton(tr("Browse…"), this);
     pathRow->addWidget(_pathEdit);
     pathRow->addWidget(browseBtn);
     form->addRow(tr("Fitxategia:"), pathRow);
@@ -50,14 +50,21 @@ PuzExportDialog::PuzExportDialog(QWidget* parent) : QDialog(parent) {
 }
 
 void PuzExportDialog::onBrowse() {
-    QString path = QFileDialog::getSaveFileName(
-        this, tr("Esportatu .puz gisa"), _pathEdit->text(),
-        tr("Across Lite (*.puz)"));
+    QString path =
+        QFileDialog::getSaveFileName(this, tr("Esportatu .puz gisa"), _pathEdit->text(), tr("Across Lite (*.puz)"));
     if (!path.isEmpty())
         _pathEdit->setText(path);
 }
 
-QString PuzExportDialog::filePath()  const { return _pathEdit->text().trimmed(); }
-QString PuzExportDialog::title()     const { return _titleEdit->text().trimmed(); }
-QString PuzExportDialog::author()    const { return _authorEdit->text().trimmed(); }
-QString PuzExportDialog::copyright() const { return _copyrightEdit->text().trimmed(); }
+QString PuzExportDialog::filePath() const {
+    return _pathEdit->text().trimmed();
+}
+QString PuzExportDialog::title() const {
+    return _titleEdit->text().trimmed();
+}
+QString PuzExportDialog::author() const {
+    return _authorEdit->text().trimmed();
+}
+QString PuzExportDialog::copyright() const {
+    return _copyrightEdit->text().trimmed();
+}

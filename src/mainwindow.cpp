@@ -431,11 +431,8 @@ void MainWindow::onExportPuz() {
         return;
     }
 
-    QString err = PuzSerializer::exportToFile(
-        _crossword->getGrid(), path,
-        dlg.title().toStdString(),
-        dlg.author().toStdString(),
-        dlg.copyright().toStdString());
+    QString err = PuzSerializer::exportToFile(_crossword->getGrid(), path, dlg.title().toStdString(),
+                                              dlg.author().toStdString(), dlg.copyright().toStdString());
 
     if (!err.isEmpty())
         QMessageBox::critical(this, tr("Export Error"), err);

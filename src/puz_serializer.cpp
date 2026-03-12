@@ -38,10 +38,8 @@ static std::string readNulStr(const QByteArray& buf, int& pos) {
 //  Export
 // ─────────────────────────────────────────────────────────────────────────────
 
-QString PuzSerializer::exportToFile(const Grid& grid, const QString& path,
-                                    const std::string& title,
-                                    const std::string& author,
-                                    const std::string& copyright,
+QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const std::string& title,
+                                    const std::string& author, const std::string& copyright,
                                     const std::string& defaultClue) {
     const int rows = grid.getRows();
     const int cols = grid.getCols();
