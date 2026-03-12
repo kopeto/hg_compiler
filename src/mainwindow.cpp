@@ -479,7 +479,7 @@ void MainWindow::onExportPuz() {
         return;
     }
 
-    PuzExportDialog dlg(this);
+    PuzExportDialog dlg(_crossword->getGrid(), this);
     if (dlg.exec() != QDialog::Accepted)
         return;
 
@@ -488,6 +488,9 @@ void MainWindow::onExportPuz() {
         QMessageBox::warning(this, tr("Export"), tr("Ez da fitxategi-bidarik hautatu."));
         return;
     }
+
+    // Write edits from the dialog table back to the GridWord objects
+    dlg.applyClues();
 
     QString err = PuzSerializer::exportToFile(_crossword->getGrid(), path, dlg.title().toStdString(),
                                               dlg.author().toStdString(), dlg.copyright().toStdString());
