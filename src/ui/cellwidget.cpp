@@ -46,14 +46,14 @@ void CellWidget::paintEvent(QPaintEvent*) {
     if (_isBlack) {
         p.fillRect(rect(), Qt::black);
     } else {
-        // Background — priority: fixed > active-cell > word-highlight > plain
+        // Background — priority: active-cell > word-highlight > fixed > plain
         QColor bg = Qt::white;
-        if (_fixed)
-            bg = QColor(232, 240, 255); // fixed: very pale blue
-        else if (_highlight == 2)
-            bg = QColor(255, 255, 140); // active cell: soft yellow
+        if (_highlight == 2)
+            bg = _fixed ? QColor(255, 230, 80) : QColor(255, 255, 140); // active cell: yellow (darker if fixed)
         else if (_highlight == 1)
-            bg = QColor(220, 235, 255); // word: pale blue
+            bg = _fixed ? QColor(180, 210, 255) : QColor(220, 235, 255); // word: pale blue (darker if fixed)
+        else if (_fixed)
+            bg = QColor(232, 240, 255); // fixed, not selected: very pale blue
 
         p.fillRect(rect(), bg);
 
