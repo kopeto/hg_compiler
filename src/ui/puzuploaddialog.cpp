@@ -219,6 +219,9 @@ QString PuzUploadDialog::serverUrl() const {
         return {};
     return QStringLiteral("https://") + host + QStringLiteral("/external/puzzle");
 }
+QString PuzUploadDialog::serverHostOnly() const {
+    return _serverEdit->text().trimmed();
+}
 QString PuzUploadDialog::apiKey() const {
     return _apiKeyEdit->text().trimmed();
 }
@@ -239,4 +242,11 @@ void PuzUploadDialog::prefillMetadata(const QString& title, const QString& autho
         _authorEdit->setText(author);
     if (!copyright.isEmpty())
         _copyrightEdit->setText(copyright);
+}
+
+void PuzUploadDialog::prefillConnection(const QString& serverHost, const QString& apiKey) {
+    if (!serverHost.isEmpty())
+        _serverEdit->setText(serverHost);
+    if (!apiKey.isEmpty())
+        _apiKeyEdit->setText(apiKey);
 }

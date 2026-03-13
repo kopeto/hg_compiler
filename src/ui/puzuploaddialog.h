@@ -19,7 +19,8 @@ class PuzUploadDialog : public QDialog {
 public:
     explicit PuzUploadDialog(Grid& grid, QWidget* parent = nullptr);
 
-    QString serverUrl() const;
+    QString serverUrl() const;      // full https://host/external/puzzle URL
+    QString serverHostOnly() const; // raw host text as typed by the user
     QString apiKey() const;
     QString title() const;
     QString author() const;
@@ -27,6 +28,9 @@ public:
 
     // Pre-fill metadata fields (call before exec())
     void prefillMetadata(const QString& title, const QString& author, const QString& copyright);
+
+    // Pre-fill server connection fields (call before exec())
+    void prefillConnection(const QString& serverHost, const QString& apiKey);
 
     // Write the edited clue texts back to the GridWord objects.
     void applyClues() const;

@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "clue.h"
+#include "hg_config.h"
 #include "paths.h"
 #include "puz_serializer.h"
 #include "qt_styles.h"
@@ -37,7 +38,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Hitz Gurutzatuak");
     resize(900, 620);
 
-    _dictPath = HG::defaultDictPath();
+    // Load persistent config first so later initialisations can use its values.
+    _config.load();
+
+    // Dict: use last-used path from config, fall back to default.
+    _dictPath = _config.dictPath.isEmpty() ? HG::defaultDictPath() : _config.dictPath;
     _dict     = std::make_unique<Dict>(_dictPath.toStdString());
 
     _refreshTimer = new QTimer(this);
@@ -192,6 +197,8 @@ void MainWindow::setupCentralWidget() {
     connect(_metaAuthorEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
         if (_crossword)
             _crossword->author = t.toStdString();
+        _config.author = t;
+        _config.save();
     });
     connect(_metaCopyrightEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
         if (_crossword)
@@ -299,11 +306,15 @@ void MainWindow::syncMetaToWidgets() {
     };
     if (_crossword) {
         syncEdit(_metaTitleEdit, _crossword->title);
-        syncEdit(_metaAuthorEdit, _crossword->author);
+        // If the crossword has no author, seed from last-used config value.
+        std::string authorVal = _crossword->author.empty() ? _config.author.toStdString() : _crossword->author;
+        syncEdit(_metaAuthorEdit, authorVal);
+        if (_crossword->author.empty())
+            _crossword->author = authorVal;
         syncEdit(_metaCopyrightEdit, _crossword->copyright);
     } else {
         syncEdit(_metaTitleEdit, {});
-        syncEdit(_metaAuthorEdit, {});
+        syncEdit(_metaAuthorEdit, _config.author.toStdString());
         syncEdit(_metaCopyrightEdit, {});
     }
 }
@@ -595,6 +606,7 @@ void MainWindow::onUploadPuz() {
     PuzUploadDialog dlg(_crossword->getGrid(), this);
     dlg.prefillMetadata(QString::fromStdString(_crossword->title), QString::fromStdString(_crossword->author),
                         QString::fromStdString(_crossword->copyright));
+    dlg.prefillConnection(_config.serverHost, _config.apiKey);
     if (dlg.exec() != QDialog::Accepted)
         return;
 
@@ -622,6 +634,11 @@ void MainWindow::onUploadPuz() {
         QMessageBox::warning(this, tr("Upload"), tr("API Key falta da."));
         return;
     }
+
+    // Persist connection settings for next session.
+    _config.serverHost = dlg.serverHostOnly();
+    _config.apiKey     = apiKey;
+    _config.save();
 
     dlg.applyClues();
 
@@ -773,8 +790,10 @@ void MainWindow::onClearGrid() {
 
 void MainWindow::onLoadDefaultDictionary() {
     try {
-        _dictPath = HG::defaultDictPath();
-        _dict     = std::make_unique<Dict>(_dictPath.toStdString());
+        _dictPath        = HG::defaultDictPath();
+        _dict            = std::make_unique<Dict>(_dictPath.toStdString());
+        _config.dictPath = "";
+        _config.save();
         statusBar()->showMessage(tr("Default dictionary loaded."), 3000);
     } catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Dictionary error"), tr("Cannot load dictionary:\n%1").arg(e.what()));
@@ -793,6 +812,8 @@ void MainWindow::onLoadCustomDictionary() {
         _dictPath = path;
         _dict     = std::make_unique<Dict>();
         _dict->load(path.toStdString());
+        _config.dictPath = path;
+        _config.save();
         statusBar()->showMessage(tr("Dictionary loaded: %1").arg(path), 3000);
     } catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Dictionary error"), tr("Cannot load dictionary:\n%1").arg(e.what()));

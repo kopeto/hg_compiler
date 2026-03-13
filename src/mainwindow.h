@@ -2,6 +2,7 @@
 
 #include "crossword.h"
 #include "dict.h"
+#include "hg_config.h"
 #include "ui/gridwidget.h"
 #include "ui/solverworker.h"
 
@@ -94,6 +95,7 @@ private:
     std::unique_ptr<Dict>      _dict;
     std::string                _currentGridPath;
     QString                    _dictPath;
+    HgConfig                   _config;
 
     // ── Solver thread ──
     QThread*      _solverThread = nullptr;
