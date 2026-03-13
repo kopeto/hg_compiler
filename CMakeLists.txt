@@ -103,7 +103,7 @@ if(BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/src
     )
 
-    # Añadir los mismos defines que hg_compiler
+    # hg_compiler-ko define berberak gehitu
     target_compile_definitions(test_backtrack_correctness PRIVATE
         HG_ASSETS_PATH="${CMAKE_SOURCE_DIR}/assets/"
         HG_DEFAULT_GRID_PATH="${CMAKE_SOURCE_DIR}/assets/grids/basic_6x6.grid"
