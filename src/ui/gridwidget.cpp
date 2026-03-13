@@ -178,10 +178,20 @@ void GridWidget::connectCell(CellWidget* cw, int r, int c) {
         } else if (!cell->isBlack()) {
             // Empty white cell → toggle black
             cell->setBlack(true);
+            if (_symmetryEnabled) {
+                int sr = _rows - 1 - r, sc = _cols - 1 - c;
+                if (sr != r || sc != c)
+                    _cells[sr][sc]->setBlack(true);
+            }
             QMetaObject::invokeMethod(this, [this]() { emit gridModified(); }, Qt::QueuedConnection);
         } else {
             // Black cell → toggle back to white
             cell->setBlack(false);
+            if (_symmetryEnabled) {
+                int sr = _rows - 1 - r, sc = _cols - 1 - c;
+                if (sr != r || sc != c)
+                    _cells[sr][sc]->setBlack(false);
+            }
             QMetaObject::invokeMethod(this, [this]() { emit gridModified(); }, Qt::QueuedConnection);
         }
     });

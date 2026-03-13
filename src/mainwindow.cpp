@@ -168,9 +168,16 @@ void MainWindow::setupCentralWidget() {
     connect(_resumeButton, &QPushButton::clicked, this, &MainWindow::onResumeSolver);
     btnLayout->addWidget(_resumeButton);
 
-    _clearButton = makeBtn(tr("Clear"), tr("Remove all letters, keeping only black cells"));
+    _clearButton = makeBtn(tr("Koadroa Garbitu"), tr("Remove all letters, keeping only black cells"));
     connect(_clearButton, &QPushButton::clicked, this, &MainWindow::onClearGrid);
     btnLayout->addWidget(_clearButton);
+
+    _symmetryCheck = new QCheckBox(tr("Koadro Simetrikoa"), btnBar);
+    _symmetryCheck->setToolTip(tr("Activate 180° rotational symmetry for black cells"));
+    _symmetryCheck->setEnabled(false); // only active in edit mode
+    _symmetryCheck->setStyleSheet(HG::Styles::kSymmetryCheck);
+    connect(_symmetryCheck, &QCheckBox::toggled, _gridWidget, &GridWidget::setSymmetry);
+    btnLayout->addWidget(_symmetryCheck);
 
     btnLayout->addStretch();
 
@@ -416,6 +423,8 @@ void MainWindow::onNewBlankGrid() {
 
 void MainWindow::onToggleEditMode(bool checked) {
     _gridWidget->setEditMode(checked);
+    if (_symmetryCheck)
+        _symmetryCheck->setEnabled(checked);
     updateEditModeIndicator();
     statusBar()->showMessage(
         checked ? tr("Edit mode ON — right-click a cell to toggle black/white") : tr("Edit mode OFF"), 3000);

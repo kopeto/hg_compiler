@@ -5,6 +5,7 @@
 #include "ui/gridwidget.h"
 #include "ui/solverworker.h"
 
+#include <QCheckBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -72,6 +73,7 @@ private:
     QLabel*      _statusLabel   = nullptr;
     QLabel*      _dictLabel     = nullptr;
     QLabel*      _editModeLabel = nullptr;
+    QCheckBox*   _symmetryCheck = nullptr;
     QPushButton* _resumeButton  = nullptr;
     QPushButton* _clearButton   = nullptr;
     QLabel*      _wordListLabel = nullptr;

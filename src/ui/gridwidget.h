@@ -44,6 +44,10 @@ public:
     void setEditMode(bool on);
     bool editMode() const { return _editMode; }
 
+    // When symmetry is on, toggling a black cell also toggles its 180° symmetric counterpart
+    void setSymmetry(bool on) { _symmetryEnabled = on; }
+    bool symmetry() const { return _symmetryEnabled; }
+
     // Recompute and assign PUZ-order cell numbers (call after any topology change)
     void updateCellNumbers();
 
@@ -86,9 +90,10 @@ private:
     // Handle keyboard navigation from a cell
     void onKeyNavigate(int fromR, int fromC, int key);
 
-    int                           _rows     = 0;
-    int                           _cols     = 0;
-    bool                          _editMode = false;
+    int                           _rows             = 0;
+    int                           _cols             = 0;
+    bool                          _editMode         = false;
+    bool                          _symmetryEnabled  = false;
     QVector<QVector<CellWidget*>> _cells;
 
     // Current selection (-1 = none)
