@@ -57,10 +57,7 @@ echo == 3/4  Deploy Qt DLLs (windeployqt) ======================================
 :: Kill any running instance so files are not locked
 taskkill /f /im HitzGurutzatuak.exe >nul 2>&1
 
-:: Build the deploy folder fresh
-if exist "%DEPLOY_DIR%" rmdir /s /q "%DEPLOY_DIR%" 2>nul
-ping -n 2 localhost >nul
-if exist "%DEPLOY_DIR%" rmdir /s /q "%DEPLOY_DIR%" 2>nul
+:: Ensure deploy/bin exists
 if not exist "%DEPLOY_DIR%\bin" mkdir "%DEPLOY_DIR%\bin"
 
 :: Copy exe — use robocopy with retries (Defender may briefly lock newly-built exe)

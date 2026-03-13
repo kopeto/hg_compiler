@@ -72,12 +72,15 @@ void MainWindow::setupMenuBar() {
     QMenu* puzMenu = menuBar()->addMenu(tr("&PUZ"));
 
     QAction* actImport = puzMenu->addAction(tr("&Import .puz…"));
+    actImport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
     connect(actImport, &QAction::triggered, this, &MainWindow::onImportPuz);
 
     QAction* actExport = puzMenu->addAction(tr("&Export as .puz…"));
+    actExport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
     connect(actExport, &QAction::triggered, this, &MainWindow::onExportPuz);
 
     QAction* actUpload = puzMenu->addAction(tr("&Upload .puz to server…"));
+    actUpload->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_U));
     connect(actUpload, &QAction::triggered, this, &MainWindow::onUploadPuz);
 
     // ── Grid ──
@@ -106,9 +109,11 @@ void MainWindow::setupMenuBar() {
     QMenu* dictMenu = menuBar()->addMenu(tr("&Dictionary"));
 
     QAction* actDefDict = dictMenu->addAction(tr("Load &Default Dictionary"));
+    actDefDict->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
     connect(actDefDict, &QAction::triggered, this, &MainWindow::onLoadDefaultDictionary);
 
     QAction* actCustDict = dictMenu->addAction(tr("Load &Custom Dictionary…"));
+    actCustDict->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
     connect(actCustDict, &QAction::triggered, this, &MainWindow::onLoadCustomDictionary);
 
     // ── Solver ──
