@@ -230,3 +230,9 @@ QString PuzExportDialog::author() const {
 QString PuzExportDialog::copyright() const {
     return _copyrightEdit->text().trimmed();
 }
+
+void PuzExportDialog::prefillMetadata(const QString& title, const QString& author, const QString& copyright) {
+    if (!title.isEmpty())     _titleEdit->setText(title);
+    if (!author.isEmpty())    _authorEdit->setText(author);
+    if (!copyright.isEmpty()) _copyrightEdit->setText(copyright);
+}

@@ -36,17 +36,16 @@ inline constexpr auto kPushButton = "QPushButton {"
 inline constexpr auto kWordList = "font-family: monospace; font-size: 12px;";
 
 // ── Symmetry checkbox ──────────────────────────────────────────
-inline constexpr auto kSymmetryCheck =
-    "QCheckBox { font-size: 12px; color: #222; spacing: 5px; }"
-    "QCheckBox::indicator { width: 14px; height: 14px;"
-    "  border: 1px solid #aaa; border-radius: 2px; background: #fff; }"
-    "QCheckBox::indicator:checked {"
-    "  background: #555; border-color: #333;"
-    "  image: url(none); }"
-    "QCheckBox::indicator:hover { border-color: #777; background: #f0f0f0; }"
-    "QCheckBox::indicator:checked:hover { background: #444; }"
-    "QCheckBox:disabled { color: #999; }"
-    "QCheckBox::indicator:disabled { background: #e0e0e0; border-color: #ccc; }";
+inline constexpr auto kSymmetryCheck = "QCheckBox { font-size: 12px; color: #222; spacing: 5px; }"
+                                       "QCheckBox::indicator { width: 14px; height: 14px;"
+                                       "  border: 1px solid #aaa; border-radius: 2px; background: #fff; }"
+                                       "QCheckBox::indicator:checked {"
+                                       "  background: #555; border-color: #333;"
+                                       "  image: url(none); }"
+                                       "QCheckBox::indicator:hover { border-color: #777; background: #f0f0f0; }"
+                                       "QCheckBox::indicator:checked:hover { background: #444; }"
+                                       "QCheckBox:disabled { color: #999; }"
+                                       "QCheckBox::indicator:disabled { background: #e0e0e0; border-color: #ccc; }";
 
 // ── Clue table (used in export / upload dialogs) ─────────────
 inline constexpr auto kClueTable = "QTableWidget { border: 1px solid #c0c0c0; border-radius: 4px; }"

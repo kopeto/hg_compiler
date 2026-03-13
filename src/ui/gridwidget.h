@@ -90,10 +90,10 @@ private:
     // Handle keyboard navigation from a cell
     void onKeyNavigate(int fromR, int fromC, int key);
 
-    int                           _rows             = 0;
-    int                           _cols             = 0;
-    bool                          _editMode         = false;
-    bool                          _symmetryEnabled  = false;
+    int                           _rows            = 0;
+    int                           _cols            = 0;
+    bool                          _editMode        = false;
+    bool                          _symmetryEnabled = false;
     QVector<QVector<CellWidget*>> _cells;
 
     // Current selection (-1 = none)

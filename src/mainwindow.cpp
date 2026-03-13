@@ -150,20 +150,65 @@ void MainWindow::setupCentralWidget() {
     gridAreaLayout->addWidget(_gridWidget, 0, Qt::AlignHCenter);
     gridAreaLayout->addStretch(1);
 
-    // ── Button bar — fixed at the bottom, never overlaps the grid ──
-    auto* btnBar    = new QWidget(_gridArea);
-    auto* btnLayout = new QHBoxLayout(btnBar);
+    // ── Bottom panel — metadata fields + controls ──────────────
+    auto* bottomPanel  = new QFrame(_gridArea);
+    bottomPanel->setFrameShape(QFrame::NoFrame);
+    auto* bottomLayout = new QVBoxLayout(bottomPanel);
+    bottomLayout->setContentsMargins(4, 6, 4, 2);
+    bottomLayout->setSpacing(5);
+
+    // ── Metadata row ──
+    auto* metaRow = new QHBoxLayout;
+    metaRow->setSpacing(6);
+
+    auto makeMetaLabel = [&](const QString& text) {
+        auto* lbl = new QLabel(text, bottomPanel);
+        lbl->setStyleSheet(HG::Styles::kSmallLabel);
+        return lbl;
+    };
+
+    metaRow->addWidget(makeMetaLabel(tr("Izenburua:")));
+    _metaTitleEdit = new QLineEdit(bottomPanel);
+    _metaTitleEdit->setPlaceholderText(tr("Kurtzearen izenburua"));
+    metaRow->addWidget(_metaTitleEdit, 2);
+
+    metaRow->addWidget(makeMetaLabel(tr("Egilea:")));
+    _metaAuthorEdit = new QLineEdit(bottomPanel);
+    _metaAuthorEdit->setPlaceholderText(tr("Egilearen izena"));
+    metaRow->addWidget(_metaAuthorEdit, 2);
+
+    metaRow->addWidget(makeMetaLabel(tr("Copyright:")));
+    _metaCopyrightEdit = new QLineEdit(bottomPanel);
+    _metaCopyrightEdit->setPlaceholderText(tr("\u00a9 2026 HitzGurutzatuak"));
+    metaRow->addWidget(_metaCopyrightEdit, 3);
+
+    bottomLayout->addLayout(metaRow);
+
+    // Connect edits → crossword metadata (live update)
+    connect(_metaTitleEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
+        if (_crossword) _crossword->title = t.toStdString();
+    });
+    connect(_metaAuthorEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
+        if (_crossword) _crossword->author = t.toStdString();
+    });
+    connect(_metaCopyrightEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
+        if (_crossword) _crossword->copyright = t.toStdString();
+    });
+
+    // ── Button row ──
+    auto* btnRow    = new QWidget(bottomPanel);
+    auto* btnLayout = new QHBoxLayout(btnRow);
     btnLayout->setContentsMargins(0, 0, 0, 0);
     btnLayout->setSpacing(6);
 
     auto makeBtn = [&](const QString& text, const QString& tooltip) -> QPushButton* {
-        auto* btn = new QPushButton(text, btnBar);
+        auto* btn = new QPushButton(text, btnRow);
         btn->setToolTip(tooltip);
         btn->setStyleSheet(HG::Styles::kPushButton);
         return btn;
     };
 
-    _resumeButton = makeBtn(tr("▶  Resume"), tr("Resume solver (F6)"));
+    _resumeButton = makeBtn(tr("\u25b6  Resume"), tr("Resume solver (F6)"));
     _resumeButton->setVisible(false);
     connect(_resumeButton, &QPushButton::clicked, this, &MainWindow::onResumeSolver);
     btnLayout->addWidget(_resumeButton);
@@ -172,8 +217,8 @@ void MainWindow::setupCentralWidget() {
     connect(_clearButton, &QPushButton::clicked, this, &MainWindow::onClearGrid);
     btnLayout->addWidget(_clearButton);
 
-    _symmetryCheck = new QCheckBox(tr("Koadro Simetrikoa"), btnBar);
-    _symmetryCheck->setToolTip(tr("Activate 180° rotational symmetry for black cells"));
+    _symmetryCheck = new QCheckBox(tr("Koadro Simetrikoa"), btnRow);
+    _symmetryCheck->setToolTip(tr("Activate 180\u00b0 rotational symmetry for black cells"));
     _symmetryCheck->setEnabled(false); // only active in edit mode
     _symmetryCheck->setStyleSheet(HG::Styles::kSymmetryCheck);
     connect(_symmetryCheck, &QCheckBox::toggled, _gridWidget, &GridWidget::setSymmetry);
@@ -181,7 +226,9 @@ void MainWindow::setupCentralWidget() {
 
     btnLayout->addStretch();
 
-    gridAreaLayout->addWidget(btnBar, 0); // fixed height, always below the grid
+    bottomLayout->addWidget(btnRow);
+
+    gridAreaLayout->addWidget(bottomPanel, 0); // fixed height, always below the grid
 
     mainLayout->addWidget(_gridArea, /*stretch=*/3);
 
@@ -239,6 +286,25 @@ void MainWindow::setupCentralWidget() {
 
 // ── Domain helpers ────────────────────────────────────────────
 
+void MainWindow::syncMetaToWidgets() {
+    if (!_metaTitleEdit)
+        return;
+    auto syncEdit = [](QLineEdit* ed, const std::string& val) {
+        ed->blockSignals(true);
+        ed->setText(QString::fromStdString(val));
+        ed->blockSignals(false);
+    };
+    if (_crossword) {
+        syncEdit(_metaTitleEdit,     _crossword->title);
+        syncEdit(_metaAuthorEdit,    _crossword->author);
+        syncEdit(_metaCopyrightEdit, _crossword->copyright);
+    } else {
+        syncEdit(_metaTitleEdit,     {});
+        syncEdit(_metaAuthorEdit,    {});
+        syncEdit(_metaCopyrightEdit, {});
+    }
+}
+
 void MainWindow::loadDefaultGrid() {
     try {
         _currentGridPath = HG::defaultGridPath().toStdString();
@@ -246,6 +312,7 @@ void MainWindow::loadDefaultGrid() {
 
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
+        syncMetaToWidgets();
         // Always start in edit mode
         _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("Default grid loaded."));
@@ -412,6 +479,7 @@ void MainWindow::onNewBlankGrid() {
         _currentGridPath.clear();
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
+        syncMetaToWidgets();
         _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("New %1×%2 grid created. Edit mode ON.")
                                      .arg(charLayout.size())
@@ -451,6 +519,7 @@ void MainWindow::onOpenGrid() {
         _crossword       = std::make_unique<Crossword>(_currentGridPath);
         _gridWidget->loadFromGrid(_crossword->getGrid());
         adjustWindowForGrid();
+        syncMetaToWidgets();
         _actEditMode->setChecked(true);
         statusBar()->showMessage(tr("Grid loaded: %1").arg(path));
     } catch (const std::exception& e) {
@@ -491,6 +560,9 @@ void MainWindow::onExportPuz() {
     }
 
     PuzExportDialog dlg(_crossword->getGrid(), this);
+    dlg.prefillMetadata(QString::fromStdString(_crossword->title),
+                        QString::fromStdString(_crossword->author),
+                        QString::fromStdString(_crossword->copyright));
     if (dlg.exec() != QDialog::Accepted)
         return;
 
@@ -519,6 +591,9 @@ void MainWindow::onUploadPuz() {
     }
 
     PuzUploadDialog dlg(_crossword->getGrid(), this);
+    dlg.prefillMetadata(QString::fromStdString(_crossword->title),
+                        QString::fromStdString(_crossword->author),
+                        QString::fromStdString(_crossword->copyright));
     if (dlg.exec() != QDialog::Accepted)
         return;
 
@@ -612,6 +687,9 @@ void MainWindow::onImportPuz() {
 
     forceStopSolver();
     _crossword = std::make_unique<Crossword>(lines);
+    _crossword->title     = puzData.title;
+    _crossword->author    = puzData.author;
+    _crossword->copyright = puzData.copyright.empty() ? "\u00a9 2026 HitzGurutzatuak" : puzData.copyright;
     _currentGridPath.clear();
 
     // Mark imported letters as fixed so the solver preserves them
@@ -627,6 +705,7 @@ void MainWindow::onImportPuz() {
 
     _gridWidget->loadFromGrid(_crossword->getGrid());
     adjustWindowForGrid();
+    syncMetaToWidgets();
 
     // Map the imported clue list onto the GridWords (same reading order as export)
     {

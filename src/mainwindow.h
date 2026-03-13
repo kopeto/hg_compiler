@@ -66,23 +66,28 @@ private:
     // Resize the window so it is never smaller than the grid + right panel,
     // and center the grid inside its container area.
     void adjustWindowForGrid();
+    // Sync metadata text fields from _crossword.
+    void syncMetaToWidgets();
 
     // ── UI ──
-    GridWidget*  _gridWidget    = nullptr;
-    QWidget*     _gridArea      = nullptr; // container that centres GridWidget
-    QLabel*      _statusLabel   = nullptr;
-    QLabel*      _dictLabel     = nullptr;
-    QLabel*      _editModeLabel = nullptr;
-    QCheckBox*   _symmetryCheck = nullptr;
-    QPushButton* _resumeButton  = nullptr;
-    QPushButton* _clearButton   = nullptr;
-    QLabel*      _wordListLabel = nullptr;
-    QListWidget* _wordList      = nullptr;
-    QTextEdit*   _clueEdit      = nullptr;
-    QAction*     _actEditMode   = nullptr;
-    QAction*     _actSolve      = nullptr;
-    QAction*     _actStop       = nullptr;
-    QAction*     _actResume     = nullptr;
+    GridWidget*  _gridWidget       = nullptr;
+    QWidget*     _gridArea         = nullptr; // container that centres GridWidget
+    QLabel*      _statusLabel      = nullptr;
+    QLabel*      _dictLabel        = nullptr;
+    QLabel*      _editModeLabel    = nullptr;
+    QCheckBox*   _symmetryCheck    = nullptr;
+    QPushButton* _resumeButton     = nullptr;
+    QPushButton* _clearButton      = nullptr;
+    QLineEdit*   _metaTitleEdit    = nullptr;
+    QLineEdit*   _metaAuthorEdit   = nullptr;
+    QLineEdit*   _metaCopyrightEdit = nullptr;
+    QLabel*      _wordListLabel    = nullptr;
+    QListWidget* _wordList         = nullptr;
+    QTextEdit*   _clueEdit         = nullptr;
+    QAction*     _actEditMode      = nullptr;
+    QAction*     _actSolve         = nullptr;
+    QAction*     _actStop          = nullptr;
+    QAction*     _actResume        = nullptr;
 
     // ── Domain ──
     std::unique_ptr<Crossword> _crossword;

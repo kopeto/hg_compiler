@@ -24,6 +24,11 @@ struct Crossword {
 
     Grid& getGrid();
 
+    // ── Metadata ──────────────────────────────────────────
+    std::string title;
+    std::string author;
+    std::string copyright = "\u00a9 2026 HitzGurutzatuak";
+
 private:
     int  _width;
     int  _height;

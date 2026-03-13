@@ -25,6 +25,9 @@ public:
     QString author() const;
     QString copyright() const;
 
+    // Pre-fill metadata fields (call before exec())
+    void prefillMetadata(const QString& title, const QString& author, const QString& copyright);
+
     // Write the edited clue texts back to the GridWord objects.
     void applyClues() const;
 
