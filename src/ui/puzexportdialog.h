@@ -30,9 +30,11 @@ public:
 
 private slots:
     void onBrowse();
+    void onClueEdited(int row, int col);
 
 private:
     void buildClueTable(Grid& grid);
+    void highlightMissingClues();
 
     QLineEdit*        _pathEdit      = nullptr;
     QLineEdit*        _titleEdit     = nullptr;

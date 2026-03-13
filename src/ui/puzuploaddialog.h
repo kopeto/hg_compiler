@@ -28,8 +28,12 @@ public:
     // Write the edited clue texts back to the GridWord objects.
     void applyClues() const;
 
+private slots:
+    void onClueEdited(int row, int col);
+
 private:
     void buildClueTable(Grid& grid);
+    void highlightMissingClues();
 
     QLineEdit*        _serverEdit    = nullptr;
     QLineEdit*        _apiKeyEdit    = nullptr;

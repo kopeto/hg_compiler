@@ -39,8 +39,7 @@ static std::string readNulStr(const QByteArray& buf, int& pos) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 QByteArray PuzSerializer::exportToBytes(const Grid& grid, const std::string& title, const std::string& author,
-                                        const std::string& copyright, const std::string& defaultClue,
-                                        QString* /*errorOut*/) {
+                                        const std::string& copyright, QString* /*errorOut*/) {
     const int rows = grid.getRows();
     const int cols = grid.getCols();
 
@@ -66,7 +65,7 @@ QByteArray PuzSerializer::exportToBytes(const Grid& grid, const std::string& tit
         const GridWord* gw = grid.getGridWordAt(static_cast<unsigned>(r), static_cast<unsigned>(c), dir);
         if (gw && gw->getClue() && !gw->getClue()->getClueText().empty())
             return gw->getClue()->getClueText();
-        return defaultClue;
+        return {};
     };
 
     std::vector<std::string> clueList;
@@ -153,10 +152,9 @@ QByteArray PuzSerializer::exportToBytes(const Grid& grid, const std::string& tit
 }
 
 QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const std::string& title,
-                                    const std::string& author, const std::string& copyright,
-                                    const std::string& defaultClue) {
+                                    const std::string& author, const std::string& copyright) {
     QString    err;
-    QByteArray bytes = exportToBytes(grid, title, author, copyright, defaultClue, &err);
+    QByteArray bytes = exportToBytes(grid, title, author, copyright, &err);
     if (bytes.isEmpty())
         return err.isEmpty() ? QStringLiteral("Failed to generate .puz data") : err;
 
