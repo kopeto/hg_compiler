@@ -59,7 +59,7 @@ void MainWindow::setupMenuBar() {
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
 
     QAction* actQuit = fileMenu->addAction(tr("&Quit"));
-    actQuit->setShortcut(QKeySequence::Quit);
+    actQuit->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q));
     connect(actQuit, &QAction::triggered, qApp, &QApplication::quit);
 
     // ── PUZ ──
@@ -225,11 +225,13 @@ void MainWindow::setupCentralWidget() {
     clueLabel->setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 4px;");
     rightLayout->addWidget(clueLabel);
 
-    _clueEdit = new QLineEdit(rightPanel);
+    _clueEdit = new QTextEdit(rightPanel);
     _clueEdit->setPlaceholderText(tr("Idatzi pista hemen\u2026"));
     _clueEdit->setEnabled(false);
+    _clueEdit->setAcceptRichText(false);
+    _clueEdit->setMinimumHeight(_clueEdit->fontMetrics().lineSpacing() * 4 + 12);
     rightLayout->addWidget(_clueEdit);
-    connect(_clueEdit, &QLineEdit::textEdited, this, &MainWindow::onClueChanged);
+    connect(_clueEdit, &QTextEdit::textChanged, this, &MainWindow::onClueChanged);
 
     mainLayout->addWidget(rightPanel, /*stretch=*/1);
 
@@ -292,7 +294,7 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir) {
         if (gw) {
             Clue* clue = gw->getClue();
             _clueEdit->blockSignals(true);
-            _clueEdit->setText(clue ? QString::fromStdString(clue->getClueText()) : QString());
+            _clueEdit->setPlainText(clue ? QString::fromStdString(clue->getClueText()) : QString());
             _clueEdit->blockSignals(false);
             _clueEdit->setEnabled(true);
         } else {
@@ -379,7 +381,7 @@ void MainWindow::onClueChanged() {
     }
     if (!gw)
         return;
-    std::string text = _clueEdit->text().toStdString();
+    std::string text = _clueEdit->toPlainText().toStdString();
     if (Clue* clue = gw->getClue()) {
         clue->setClueText(text);
     } else {

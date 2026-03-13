@@ -10,6 +10,7 @@
 #include <QListWidget>
 #include <QMainWindow>
 #include <QPushButton>
+#include <QTextEdit>
 #include <QThread>
 #include <QTimer>
 #include <functional>
@@ -75,7 +76,7 @@ private:
     QPushButton* _clearButton   = nullptr;
     QLabel*      _wordListLabel = nullptr;
     QListWidget* _wordList      = nullptr;
-    QLineEdit*   _clueEdit      = nullptr;
+    QTextEdit*   _clueEdit      = nullptr;
     QAction*     _actEditMode   = nullptr;
     QAction*     _actSolve      = nullptr;
     QAction*     _actStop       = nullptr;
