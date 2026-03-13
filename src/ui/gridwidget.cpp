@@ -200,10 +200,10 @@ void GridWidget::updateCellNumbers() {
             if (_cells[r][c]->isBlack()) {
                 continue;
             }
-            bool startsAcross = (c == 0 || _cells[r][c - 1]->isBlack()) &&
-                                (c + 1 < _cols && !_cells[r][c + 1]->isBlack());
-            bool startsDown   = (r == 0 || _cells[r - 1][c]->isBlack()) &&
-                                (r + 1 < _rows && !_cells[r + 1][c]->isBlack());
+            bool startsAcross =
+                (c == 0 || _cells[r][c - 1]->isBlack()) && (c + 1 < _cols && !_cells[r][c + 1]->isBlack());
+            bool startsDown =
+                (r == 0 || _cells[r - 1][c]->isBlack()) && (r + 1 < _rows && !_cells[r + 1][c]->isBlack());
             if (startsAcross || startsDown)
                 _cells[r][c]->setNumber(num++);
             else

@@ -24,8 +24,11 @@ public:
     int  highlight() const { return _highlight; }
 
     // Cell number (0 = no number), shown in the top-left corner
-    void setNumber(int n) { _number = n; update(); }
-    int  number()   const { return _number; }
+    void setNumber(int n) {
+        _number = n;
+        update();
+    }
+    int number() const { return _number; }
 
     static constexpr int CELL_SIZE = 36;
 
