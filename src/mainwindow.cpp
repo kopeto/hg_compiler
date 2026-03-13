@@ -3,6 +3,7 @@
 #include "clue.h"
 #include "paths.h"
 #include "puz_serializer.h"
+#include "qt_styles.h"
 #include "ui/newgriddialog.h"
 #include "ui/puzexportdialog.h"
 #include "ui/puzuploaddialog.h"
@@ -139,7 +140,7 @@ void MainWindow::setupCentralWidget() {
     connect(_gridWidget, &GridWidget::interactionRequested, this, &MainWindow::pauseSolver, Qt::DirectConnection);
 
     _gridArea = new QWidget(this);
-    _gridArea->setStyleSheet("background: #e8e8e8;");
+    _gridArea->setStyleSheet(HG::Styles::kGridArea);
     auto* gridAreaLayout = new QVBoxLayout(_gridArea);
     gridAreaLayout->setContentsMargins(8, 8, 8, 8);
     gridAreaLayout->setSpacing(6);
@@ -158,17 +159,7 @@ void MainWindow::setupCentralWidget() {
     auto makeBtn = [&](const QString& text, const QString& tooltip) -> QPushButton* {
         auto* btn = new QPushButton(text, btnBar);
         btn->setToolTip(tooltip);
-        btn->setStyleSheet("QPushButton {"
-                           "  background: #dcdcdc;"
-                           "  color: #222;"
-                           "  border: 1px solid #aaa;"
-                           "  border-radius: 4px;"
-                           "  padding: 4px 12px;"
-                           "  font-size: 12px;"
-                           "}"
-                           "QPushButton:hover  { background: #c8c8c8; border-color: #888; }"
-                           "QPushButton:pressed{ background: #b0b0b0; }"
-                           "QPushButton:disabled { color: #999; background: #ebebeb; }");
+        btn->setStyleSheet(HG::Styles::kPushButton);
         return btn;
     };
 
@@ -196,12 +187,12 @@ void MainWindow::setupCentralWidget() {
 
     _dictLabel = new QLabel(this);
     _dictLabel->setWordWrap(true);
-    _dictLabel->setStyleSheet("font-size: 11px; color: #555;");
+    _dictLabel->setStyleSheet(HG::Styles::kSmallMuted);
     rightLayout->addWidget(_dictLabel);
     updateDictLabel();
 
     _editModeLabel = new QLabel(this);
-    _editModeLabel->setStyleSheet("font-size: 11px;");
+    _editModeLabel->setStyleSheet(HG::Styles::kSmallLabel);
     rightLayout->addWidget(_editModeLabel);
     updateEditModeIndicator();
 
@@ -212,17 +203,17 @@ void MainWindow::setupCentralWidget() {
 
     // Word list: shows candidates for the currently selected word
     _wordListLabel = new QLabel(tr("Candidates:"), rightPanel);
-    _wordListLabel->setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 6px;");
+    _wordListLabel->setStyleSheet(HG::Styles::kSmallBold);
     rightLayout->addWidget(_wordListLabel);
 
     _wordList = new QListWidget(rightPanel);
     _wordList->setAlternatingRowColors(true);
-    _wordList->setStyleSheet("font-family: monospace; font-size: 12px;");
+    _wordList->setStyleSheet(HG::Styles::kWordList);
     connect(_wordList, &QListWidget::itemDoubleClicked, this, &MainWindow::onWordListDoubleClicked);
     rightLayout->addWidget(_wordList, /*stretch=*/1);
 
     auto* clueLabel = new QLabel(tr("Pista:"), rightPanel);
-    clueLabel->setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 4px;");
+    clueLabel->setStyleSheet(HG::Styles::kSectionLabel);
     rightLayout->addWidget(clueLabel);
 
     _clueEdit = new QTextEdit(rightPanel);

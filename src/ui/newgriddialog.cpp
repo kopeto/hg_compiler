@@ -1,5 +1,7 @@
 #include "newgriddialog.h"
 
+#include "../qt_styles.h"
+
 #include <QFormLayout>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -29,7 +31,7 @@ NewGridDialog::NewGridDialog(QWidget* parent) : QDialog(parent) {
 
     // ── Hint label ─────────────────────────────────────────
     auto* hint = new QLabel(tr("Right-click a cell to toggle black / white"), this);
-    hint->setStyleSheet("color: #555; font-size: 11px;");
+    hint->setStyleSheet(HG::Styles::kSmallMuted);
 
     // ── Preview (GridWidget inside a scroll area) ──────────
     _preview = new GridWidget(this);

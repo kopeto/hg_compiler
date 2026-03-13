@@ -3,6 +3,7 @@
 #include "../clue.h"
 #include "../grid.h"
 #include "../grid_word.h"
+#include "../qt_styles.h"
 
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -22,11 +23,11 @@ PuzUploadDialog::PuzUploadDialog(Grid& grid, QWidget* parent) : QDialog(parent) 
     // ── Server URL ─────────────────────────────────────────
     auto* serverRow   = new QHBoxLayout;
     auto* prefixLabel = new QLabel(QStringLiteral("https://"), this);
-    prefixLabel->setStyleSheet("color: #555;");
+    prefixLabel->setStyleSheet(HG::Styles::kMuted);
     _serverEdit = new QLineEdit(this);
     _serverEdit->setPlaceholderText(tr("miserver.com"));
     auto* suffixLabel = new QLabel(QStringLiteral("/external/puzzle"), this);
-    suffixLabel->setStyleSheet("color: #555;");
+    suffixLabel->setStyleSheet(HG::Styles::kMuted);
     serverRow->addWidget(prefixLabel);
     serverRow->addWidget(_serverEdit, 1);
     serverRow->addWidget(suffixLabel);
@@ -53,7 +54,7 @@ PuzUploadDialog::PuzUploadDialog(Grid& grid, QWidget* parent) : QDialog(parent) 
 
     // ── Clue table ───────────────────────────────────────────
     auto* clueLabel = new QLabel(tr("Pistak:"), this);
-    clueLabel->setStyleSheet("font-weight: bold; margin-top: 4px;");
+    clueLabel->setStyleSheet(HG::Styles::kSectionLabel);
 
     _clueTable = new QTableWidget(0, 3, this);
     _clueTable->setHorizontalHeaderLabels({tr("#"), tr("Hitza"), tr("Pista")});
@@ -67,12 +68,12 @@ PuzUploadDialog::PuzUploadDialog(Grid& grid, QWidget* parent) : QDialog(parent) 
                                 QAbstractItemView::AnyKeyPressed);
     _clueTable->setAlternatingRowColors(true);
     _clueTable->setShowGrid(false);
-    _clueTable->setStyleSheet("QTableWidget { border: 1px solid #c0c0c0; border-radius: 4px; }"
-                              "QTableWidget::item { padding: 4px 8px; }"
-                              "QHeaderView::section { background: #f0f0f0; font-weight: bold; "
-                              "                       padding: 4px 8px; border: none; "
-                              "                       border-bottom: 1px solid #c0c0c0; }");
+    _clueTable->setStyleSheet(HG::Styles::kClueTable);
     buildClueTable(grid);
+
+    // Highlight rows with missing clues
+    highlightMissingClues();
+    connect(_clueTable, &QTableWidget::cellChanged, this, &PuzUploadDialog::onClueEdited);
 
     // ── Buttons ─────────────────────────────────────────────
     _buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
@@ -186,6 +187,30 @@ void PuzUploadDialog::applyClues() const {
             continue;
         gw->setClue(item->text().toStdString());
     }
+}
+
+void PuzUploadDialog::highlightMissingClues() {
+    for (int row = 0; row < static_cast<int>(_rowToWord.size()); ++row) {
+        if (!_rowToWord[row])
+            continue;
+        QTableWidgetItem* item = _clueTable->item(row, 2);
+        if (item && item->text().trimmed().isEmpty())
+            item->setBackground(QColor(HG::Styles::kMissingClueColor));
+    }
+}
+
+void PuzUploadDialog::onClueEdited(int row, int col) {
+    if (col != 2)
+        return;
+    if (row < 0 || row >= static_cast<int>(_rowToWord.size()) || !_rowToWord[row])
+        return;
+    QTableWidgetItem* item = _clueTable->item(row, 2);
+    if (!item)
+        return;
+    if (item->text().trimmed().isEmpty())
+        item->setBackground(QColor(HG::Styles::kMissingClueColor));
+    else
+        item->setBackground(_clueTable->palette().color(QPalette::Base));
 }
 
 QString PuzUploadDialog::serverUrl() const {
