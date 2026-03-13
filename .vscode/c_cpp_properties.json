@@ -4,12 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/Qt/6.10.2/msvc2022_64/include",
-                "C:/Qt/6.10.2/msvc2022_64/include/QtWidgets",
-                "C:/Qt/6.10.2/msvc2022_64/include/QtCore",
-                "C:/Qt/6.10.2/msvc2022_64/include/QtGui",
-                "C:/Qt/6.10.2/msvc2022_64/include/QtOpenGL",
-                "C:/Qt/6.10.2/msvc2022_64/include/QtOpenGLWidgets"
+                "C:/Qt/6.10.2/msvc2022_64/include/**"
+
             ],
             "defines": [
                 "_DEBUG",
