@@ -38,9 +38,9 @@ static std::string readNulStr(const QByteArray& buf, int& pos) {
 //  Export
 // ─────────────────────────────────────────────────────────────────────────────
 
-QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const std::string& title,
-                                    const std::string& author, const std::string& copyright,
-                                    const std::string& defaultClue) {
+QByteArray PuzSerializer::exportToBytes(const Grid& grid, const std::string& title, const std::string& author,
+                                        const std::string& copyright, const std::string& defaultClue,
+                                        QString* /*errorOut*/) {
     const int rows = grid.getRows();
     const int cols = grid.getCols();
 
@@ -130,27 +130,41 @@ QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const
     std::memcpy(header + 0x18, "1.3\0", 4);
     std::memcpy(header + 0x2C, cib, 8);
 
-    // ── Write ─────────────────────────────────────────────────────
+    // ── Assemble into QByteArray ──────────────────────────────────
+    QByteArray buf;
+    buf.reserve(52 + static_cast<int>(solution.size()) * 2 + 256);
+
+    auto appendNul = [&](const std::string& s) {
+        buf.append(s.data(), static_cast<qsizetype>(s.size()));
+        buf.append('\0');
+    };
+
+    buf.append(reinterpret_cast<const char*>(header), 52);
+    buf.append(solution.data(), static_cast<qsizetype>(solution.size()));
+    buf.append(playerState.data(), static_cast<qsizetype>(playerState.size()));
+    appendNul(title);
+    appendNul(author);
+    appendNul(copyright);
+    for (const auto& cl : clueList)
+        appendNul(cl);
+    appendNul(""); // notes
+
+    return buf;
+}
+
+QString PuzSerializer::exportToFile(const Grid& grid, const QString& path, const std::string& title,
+                                    const std::string& author, const std::string& copyright,
+                                    const std::string& defaultClue) {
+    QString    err;
+    QByteArray bytes = exportToBytes(grid, title, author, copyright, defaultClue, &err);
+    if (bytes.isEmpty())
+        return err.isEmpty() ? QStringLiteral("Failed to generate .puz data") : err;
+
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly))
         return QStringLiteral("Cannot open file for writing:\n") + path;
-
-    auto writeNul = [&](const std::string& s) {
-        file.write(s.data(), static_cast<qint64>(s.size()));
-        file.write("\0", 1);
-    };
-
-    file.write(reinterpret_cast<const char*>(header), 52);
-    file.write(solution.data(), static_cast<qint64>(solution.size()));
-    file.write(playerState.data(), static_cast<qint64>(playerState.size()));
-    writeNul(title);     // title
-    writeNul(author);    // author
-    writeNul(copyright); // copyright
-    for (const auto& cl : clueList)
-        writeNul(cl);
-    writeNul(""); // notes
+    file.write(bytes);
     file.close();
-
     return {};
 }
 

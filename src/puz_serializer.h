@@ -26,6 +26,13 @@ struct PuzData {
 
 class PuzSerializer {
 public:
+    // Build the raw .puz binary in memory.
+    // Returns the bytes on success; on failure the QByteArray is empty and
+    // *errorOut (if non-null) receives the error message.
+    static QByteArray exportToBytes(const Grid& grid, const std::string& title = {}, const std::string& author = {},
+                                    const std::string& copyright   = {},
+                                    const std::string& defaultClue = "Ez dago pistarik", QString* errorOut = nullptr);
+
     // Export grid to a .puz file.
     // defaultClue is used for every clue since we have no clue data yet.
     // Returns an empty string on success, or an error message on failure.
