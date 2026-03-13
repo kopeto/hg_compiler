@@ -65,14 +65,11 @@ robocopy "%BUILD_DIR%\Release" "%DEPLOY_DIR%\bin" HitzGurutzatuak.exe /COPY:DAT 
 powershell -Command "Unblock-File '%DEPLOY_DIR%\bin\HitzGurutzatuak.exe'" >nul 2>&1
 
 :: Deploy Qt DLLs alongside the exe
-"%WINDEPLOYQT%" --release --no-translations "%DEPLOY_DIR%\bin\HitzGurutzatuak.exe"
+"%WINDEPLOYQT%" --release --no-translations --no-opengl-sw "%DEPLOY_DIR%\bin\HitzGurutzatuak.exe"
 if errorlevel 1 (echo [ERROR] windeployqt failed. & exit /b 1)
 
 :: Copy assets
 xcopy /y /s /e "%~dp0assets" "%DEPLOY_DIR%\assets\"
-
-"%WINDEPLOYQT%" --release --no-translations "%DEPLOY_DIR%\bin\HitzGurutzatuak.exe"
-if errorlevel 1 (echo [ERROR] windeployqt failed. & exit /b 1)
 
 echo.
 if "%BUILD_INSTALLER%"=="1" (
