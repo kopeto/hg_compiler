@@ -151,7 +151,7 @@ void MainWindow::setupCentralWidget() {
     gridAreaLayout->addStretch(1);
 
     // ── Bottom panel — metadata fields + controls ──────────────
-    auto* bottomPanel  = new QFrame(_gridArea);
+    auto* bottomPanel = new QFrame(_gridArea);
     bottomPanel->setFrameShape(QFrame::NoFrame);
     auto* bottomLayout = new QVBoxLayout(bottomPanel);
     bottomLayout->setContentsMargins(4, 6, 4, 2);
@@ -186,13 +186,16 @@ void MainWindow::setupCentralWidget() {
 
     // Connect edits → crossword metadata (live update)
     connect(_metaTitleEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
-        if (_crossword) _crossword->title = t.toStdString();
+        if (_crossword)
+            _crossword->title = t.toStdString();
     });
     connect(_metaAuthorEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
-        if (_crossword) _crossword->author = t.toStdString();
+        if (_crossword)
+            _crossword->author = t.toStdString();
     });
     connect(_metaCopyrightEdit, &QLineEdit::textChanged, this, [this](const QString& t) {
-        if (_crossword) _crossword->copyright = t.toStdString();
+        if (_crossword)
+            _crossword->copyright = t.toStdString();
     });
 
     // ── Button row ──
@@ -295,12 +298,12 @@ void MainWindow::syncMetaToWidgets() {
         ed->blockSignals(false);
     };
     if (_crossword) {
-        syncEdit(_metaTitleEdit,     _crossword->title);
-        syncEdit(_metaAuthorEdit,    _crossword->author);
+        syncEdit(_metaTitleEdit, _crossword->title);
+        syncEdit(_metaAuthorEdit, _crossword->author);
         syncEdit(_metaCopyrightEdit, _crossword->copyright);
     } else {
-        syncEdit(_metaTitleEdit,     {});
-        syncEdit(_metaAuthorEdit,    {});
+        syncEdit(_metaTitleEdit, {});
+        syncEdit(_metaAuthorEdit, {});
         syncEdit(_metaCopyrightEdit, {});
     }
 }
@@ -560,8 +563,7 @@ void MainWindow::onExportPuz() {
     }
 
     PuzExportDialog dlg(_crossword->getGrid(), this);
-    dlg.prefillMetadata(QString::fromStdString(_crossword->title),
-                        QString::fromStdString(_crossword->author),
+    dlg.prefillMetadata(QString::fromStdString(_crossword->title), QString::fromStdString(_crossword->author),
                         QString::fromStdString(_crossword->copyright));
     if (dlg.exec() != QDialog::Accepted)
         return;
@@ -591,8 +593,7 @@ void MainWindow::onUploadPuz() {
     }
 
     PuzUploadDialog dlg(_crossword->getGrid(), this);
-    dlg.prefillMetadata(QString::fromStdString(_crossword->title),
-                        QString::fromStdString(_crossword->author),
+    dlg.prefillMetadata(QString::fromStdString(_crossword->title), QString::fromStdString(_crossword->author),
                         QString::fromStdString(_crossword->copyright));
     if (dlg.exec() != QDialog::Accepted)
         return;
@@ -686,7 +687,7 @@ void MainWindow::onImportPuz() {
     auto lines = PuzSerializer::toGridLines(puzData);
 
     forceStopSolver();
-    _crossword = std::make_unique<Crossword>(lines);
+    _crossword            = std::make_unique<Crossword>(lines);
     _crossword->title     = puzData.title;
     _crossword->author    = puzData.author;
     _crossword->copyright = puzData.copyright.empty() ? "\u00a9 2026 HitzGurutzatuak" : puzData.copyright;

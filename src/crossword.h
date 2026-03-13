@@ -30,8 +30,8 @@ struct Crossword {
     std::string copyright = "\u00a9 2026 HitzGurutzatuak";
 
 private:
-    int  _width;
-    int  _height;
-    Grid _grid;
+    int                           _width;
+    int                           _height;
+    Grid                          _grid;
     mutable std::vector<GridWord> _allWords;
 };
