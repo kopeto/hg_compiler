@@ -5,6 +5,7 @@
 #include "puz_serializer.h"
 #include "ui/newgriddialog.h"
 #include "ui/puzexportdialog.h"
+#include "ui/puzuploaddialog.h"
 
 #include <QAction>
 #include <QApplication>
@@ -13,11 +14,15 @@
 #include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QHttpMultiPart>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QSslSocket>
 #include <QStatusBar>
 #include <QTextStream>
 #include <QVBoxLayout>
@@ -53,17 +58,21 @@ void MainWindow::setupMenuBar() {
     // ── File ──
     QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
 
-    QAction* actImport = fileMenu->addAction(tr("&Import .puz…"));
-    connect(actImport, &QAction::triggered, this, &MainWindow::onImportPuz);
-
-    QAction* actExport = fileMenu->addAction(tr("&Export as .puz…"));
-    connect(actExport, &QAction::triggered, this, &MainWindow::onExportPuz);
-
-    fileMenu->addSeparator();
-
     QAction* actQuit = fileMenu->addAction(tr("&Quit"));
     actQuit->setShortcut(QKeySequence::Quit);
     connect(actQuit, &QAction::triggered, qApp, &QApplication::quit);
+
+    // ── PUZ ──
+    QMenu* puzMenu = menuBar()->addMenu(tr("&PUZ"));
+
+    QAction* actImport = puzMenu->addAction(tr("&Import .puz…"));
+    connect(actImport, &QAction::triggered, this, &MainWindow::onImportPuz);
+
+    QAction* actExport = puzMenu->addAction(tr("&Export as .puz…"));
+    connect(actExport, &QAction::triggered, this, &MainWindow::onExportPuz);
+
+    QAction* actUpload = puzMenu->addAction(tr("&Upload .puz to server…"));
+    connect(actUpload, &QAction::triggered, this, &MainWindow::onUploadPuz);
 
     // ── Grid ──
     QMenu* gridMenu = menuBar()->addMenu(tr("&Grid"));
@@ -499,6 +508,91 @@ void MainWindow::onExportPuz() {
         QMessageBox::critical(this, tr("Export Error"), err);
     else
         statusBar()->showMessage(tr("Exported: %1").arg(QFileInfo(path).fileName()));
+}
+
+void MainWindow::onUploadPuz() {
+    if (!_crossword) {
+        QMessageBox::warning(this, tr("Upload"), tr("No grid loaded."));
+        return;
+    }
+
+    PuzUploadDialog dlg(_crossword->getGrid(), this);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    QString serverUrl = dlg.serverUrl();
+    QString apiKey    = dlg.apiKey();
+    if (serverUrl.isEmpty()) {
+        QMessageBox::warning(this, tr("Upload"), tr("Zerbitzariaren URLa falta da."));
+        return;
+    }
+
+    QUrl url(serverUrl);
+    if (!url.isValid()) {
+        QMessageBox::warning(this, tr("Upload"), tr("URLa ez da baliozkoa: %1").arg(url.errorString()));
+        return;
+    }
+
+    if (!QSslSocket::supportsSsl()) {
+        QMessageBox::critical(this, tr("Upload Error"),
+                              tr("HTTPS ez dago erabilgarri: SSL/TLS backend-a falta da.\n"
+                                 "Ziurtatu Qt TLS pluginak (qopensslbackend, qschannelbackend) eskuragarri daudela."));
+        return;
+    }
+
+    if (apiKey.isEmpty()) {
+        QMessageBox::warning(this, tr("Upload"), tr("API Key falta da."));
+        return;
+    }
+
+    dlg.applyClues();
+
+    QByteArray puzBytes = PuzSerializer::exportToBytes(_crossword->getGrid(), dlg.title().toStdString(),
+                                                       dlg.author().toStdString(), dlg.copyright().toStdString());
+
+    if (puzBytes.isEmpty()) {
+        QMessageBox::critical(this, tr("Upload Error"), tr("Ezin izan da .puz sortu."));
+        return;
+    }
+
+    // Build multipart/form-data request (equivalent to curl -F "filename=@file.puz")
+    auto* multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+
+    QHttpPart filePart;
+    filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
+                       QVariant(QStringLiteral("form-data; name=\"filename\"; filename=\"puzzle.puz\"")));
+    filePart.setHeader(QNetworkRequest::ContentTypeHeader, QVariant(QStringLiteral("application/octet-stream")));
+    filePart.setBody(puzBytes);
+    multiPart->append(filePart);
+
+    QNetworkRequest request{url};
+    request.setRawHeader("Authorization", QStringLiteral("Bearer %1").arg(apiKey).toUtf8());
+
+    auto*          manager = new QNetworkAccessManager(this);
+    QNetworkReply* reply   = manager->post(request, multiPart);
+    multiPart->setParent(reply); // ensure multiPart is deleted with reply
+
+    statusBar()->showMessage(tr("Igotzen / Uploading…"));
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, manager]() {
+        reply->deleteLater();
+        manager->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            QMessageBox::critical(this, tr("Upload Error"), tr("Errorea igotzen:\n%1").arg(reply->errorString()));
+            statusBar()->showMessage(tr("Upload failed"), 5000);
+        } else {
+            int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            if (httpStatus >= 200 && httpStatus < 300) {
+                statusBar()->showMessage(tr("Upload OK (HTTP %1)").arg(httpStatus), 5000);
+            } else {
+                QString body = QString::fromUtf8(reply->readAll()).left(500);
+                QMessageBox::warning(this, tr("Upload"),
+                                     tr("Zerbitzariak HTTP %1 erantzun du.\n%2").arg(httpStatus).arg(body));
+                statusBar()->showMessage(tr("Upload: HTTP %1").arg(httpStatus), 5000);
+            }
+        }
+    });
 }
 
 void MainWindow::onImportPuz() {

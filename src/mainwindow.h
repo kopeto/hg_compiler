@@ -26,6 +26,7 @@ private slots:
     void onOpenGrid();
     void onSaveGrid();
     void onExportPuz();
+    void onUploadPuz();
     void onImportPuz();
     void onToggleEditMode(bool checked);
 
@@ -81,10 +82,10 @@ private:
     QAction*     _actResume     = nullptr;
 
     // ── Domain ──
-    std::unique_ptr<Crossword>              _crossword;
-    std::unique_ptr<Dict>                   _dict;
-    std::string                             _currentGridPath;
-    QString                                 _dictPath;
+    std::unique_ptr<Crossword> _crossword;
+    std::unique_ptr<Dict>      _dict;
+    std::string                _currentGridPath;
+    QString                    _dictPath;
 
     // ── Solver thread ──
     QThread*      _solverThread = nullptr;
