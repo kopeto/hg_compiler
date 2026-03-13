@@ -30,7 +30,7 @@ set(CMAKE_DISABLE_FIND_PACKAGE_WrapVulkanHeaders TRUE)
 
 # Find and link Qt6
 set(CMAKE_AUTOMOC ON)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 
 # Source files (adjust to your actual project structure)
 file(GLOB_RECURSE HG_SOURCES CONFIGURE_DEPENDS
@@ -80,6 +80,7 @@ target_compile_definitions(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     Threads::Threads
     Qt6::Widgets
+    Qt6::Network
 )
 
 # Tests
