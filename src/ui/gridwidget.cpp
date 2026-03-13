@@ -193,6 +193,25 @@ void GridWidget::connectCell(CellWidget* cw, int r, int c) {
     });
 }
 
+void GridWidget::updateCellNumbers() {
+    int num = 1;
+    for (int r = 0; r < _rows; ++r) {
+        for (int c = 0; c < _cols; ++c) {
+            if (_cells[r][c]->isBlack()) {
+                continue;
+            }
+            bool startsAcross = (c == 0 || _cells[r][c - 1]->isBlack()) &&
+                                (c + 1 < _cols && !_cells[r][c + 1]->isBlack());
+            bool startsDown   = (r == 0 || _cells[r - 1][c]->isBlack()) &&
+                                (r + 1 < _rows && !_cells[r + 1][c]->isBlack());
+            if (startsAcross || startsDown)
+                _cells[r][c]->setNumber(num++);
+            else
+                _cells[r][c]->setNumber(0);
+        }
+    }
+}
+
 void GridWidget::buildLayout() {
     // Delete old layout
     if (layout()) {
@@ -245,6 +264,7 @@ void GridWidget::loadFromGrid(const Grid& grid) {
     }
 
     buildLayout();
+    updateCellNumbers();
 }
 
 void GridWidget::loadBlank(int rows, int cols) {
@@ -268,6 +288,7 @@ void GridWidget::loadBlank(int rows, int cols) {
     }
 
     buildLayout();
+    updateCellNumbers();
 }
 
 void GridWidget::setEditMode(bool on) {

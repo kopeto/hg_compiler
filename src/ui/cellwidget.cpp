@@ -67,6 +67,16 @@ void CellWidget::paintEvent(QPaintEvent*) {
             p.drawRect(rect().adjusted(1, 1, -2, -2));
         }
 
+        // Cell number (top-left corner, small font)
+        if (_number > 0) {
+            QFont nf = p.font();
+            nf.setPixelSize(9);
+            nf.setBold(false);
+            p.setFont(nf);
+            p.setPen(QColor(60, 60, 60));
+            p.drawText(QRect(2, 1, CELL_SIZE - 4, 12), Qt::AlignLeft | Qt::AlignTop, QString::number(_number));
+        }
+
         // Letter
         if (_letter != '_') {
             QFont f = p.font();

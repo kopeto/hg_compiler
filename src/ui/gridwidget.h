@@ -44,6 +44,9 @@ public:
     void setEditMode(bool on);
     bool editMode() const { return _editMode; }
 
+    // Recompute and assign PUZ-order cell numbers (call after any topology change)
+    void updateCellNumbers();
+
     // Returns {row, col, letter} for every currently fixed cell
     struct FixedCell {
         int  row, col;

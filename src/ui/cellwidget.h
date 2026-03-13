@@ -23,6 +23,10 @@ public:
     void setHighlight(int level);
     int  highlight() const { return _highlight; }
 
+    // Cell number (0 = no number), shown in the top-left corner
+    void setNumber(int n) { _number = n; update(); }
+    int  number()   const { return _number; }
+
     static constexpr int CELL_SIZE = 36;
 
 signals:
@@ -41,4 +45,5 @@ private:
     bool _fixed     = false;
     char _letter    = '_';
     int  _highlight = 0; // 0=none, 1=word, 2=active cell
+    int  _number    = 0; // 0 = no number
 };
