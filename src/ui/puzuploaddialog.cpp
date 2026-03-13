@@ -12,7 +12,7 @@
 #include <QVBoxLayout>
 
 PuzUploadDialog::PuzUploadDialog(Grid& grid, QWidget* parent) : QDialog(parent) {
-    setWindowTitle(tr("Esportatu .puz zerbitzarira"));
+    setWindowTitle(tr("Esportatu PUZ-a zerbitzarira"));
     setModal(true);
     setMinimumWidth(580);
     setMinimumHeight(500);
