@@ -43,7 +43,8 @@ void Grid::initFromLines(const std::vector<std::string>& lines) {
 
         std::vector<Cell> row;
         for (char c : line) {
-            if (c != '#' && c != '.')
+            char upper = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+            if (c != '#' && c != '.' && !(upper >= 'A' && upper <= 'Z'))
                 throw std::runtime_error("Invalid character in grid: " + std::string(1, c));
             row.emplace_back(c);
         }

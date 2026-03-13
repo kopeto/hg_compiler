@@ -611,6 +611,18 @@ void MainWindow::onImportPuz() {
     forceStopSolver();
     _crossword = std::make_unique<Crossword>(lines);
     _currentGridPath.clear();
+
+    // Mark imported letters as fixed so the solver preserves them
+    {
+        Grid& g = _crossword->getGrid();
+        for (int r = 0; r < g.getRows(); ++r)
+            for (int c = 0; c < g.getCols(); ++c) {
+                char v = static_cast<char>(g.getValue(r, c));
+                if (v != '#' && v != '_')
+                    g.fixCell(r, c, v);
+            }
+    }
+
     _gridWidget->loadFromGrid(_crossword->getGrid());
     adjustWindowForGrid();
 
