@@ -54,10 +54,24 @@ if errorlevel 1 (echo [ERROR] Build failed. & exit /b 1)
 
 echo.
 echo == 3/4  Deploy Qt DLLs (windeployqt) =================================================
-:: Copy the executable and assets to the deploy folder
-if exist "%DEPLOY_DIR%" rmdir /s /q "%DEPLOY_DIR%"
-mkdir "%DEPLOY_DIR%\bin"
-xcopy /y "%BUILD_DIR%\Release\HitzGurutzatuak.exe" "%DEPLOY_DIR%\bin\"
+:: Kill any running instance so files are not locked
+taskkill /f /im HitzGurutzatuak.exe >nul 2>&1
+
+:: Build the deploy folder fresh
+if exist "%DEPLOY_DIR%" rmdir /s /q "%DEPLOY_DIR%" 2>nul
+ping -n 2 localhost >nul
+if exist "%DEPLOY_DIR%" rmdir /s /q "%DEPLOY_DIR%" 2>nul
+if not exist "%DEPLOY_DIR%\bin" mkdir "%DEPLOY_DIR%\bin"
+
+:: Copy exe — use robocopy with retries (Defender may briefly lock newly-built exe)
+robocopy "%BUILD_DIR%\Release" "%DEPLOY_DIR%\bin" HitzGurutzatuak.exe /COPY:DAT /R:10 /W:2 /NP /NJH /NJS
+powershell -Command "Unblock-File '%DEPLOY_DIR%\bin\HitzGurutzatuak.exe'" >nul 2>&1
+
+:: Deploy Qt DLLs alongside the exe
+"%WINDEPLOYQT%" --release --no-translations "%DEPLOY_DIR%\bin\HitzGurutzatuak.exe"
+if errorlevel 1 (echo [ERROR] windeployqt failed. & exit /b 1)
+
+:: Copy assets
 xcopy /y /s /e "%~dp0assets" "%DEPLOY_DIR%\assets\"
 
 "%WINDEPLOYQT%" --release --no-translations "%DEPLOY_DIR%\bin\HitzGurutzatuak.exe"
