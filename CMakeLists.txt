@@ -30,6 +30,7 @@ set(CMAKE_DISABLE_FIND_PACKAGE_WrapVulkanHeaders TRUE)
 
 # Find and link Qt6
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 
 # Source files (adjust to your actual project structure)
@@ -41,8 +42,15 @@ if(NOT HG_SOURCES)
     message(WARNING "No source files found in src/.")
 endif()
 
-add_executable(${PROJECT_NAME} 
+# Windows application icon (.rc embeds the .ico into the .exe)
+if(WIN32)
+    set(HG_PLATFORM_RESOURCES "${CMAKE_SOURCE_DIR}/src/app_icon.rc")
+endif()
+
+add_executable(${PROJECT_NAME}
     ${HG_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/resources.qrc
+    ${HG_PLATFORM_RESOURCES}
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -77,7 +85,7 @@ target_compile_definitions(${PROJECT_NAME}
         HG_ENABLE_PROFILER=$<IF:$<BOOL:${ENABLE_PROFILER}>,1,0>
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE 
+target_link_libraries(${PROJECT_NAME} PRIVATE
     Threads::Threads
     Qt6::Widgets
     Qt6::Network
