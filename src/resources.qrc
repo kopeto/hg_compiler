@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="hg_icon.png">../assets/icons/hg_icon.png</file>
+        <file alias="hg_icon.svg">../assets/icons/hg_icon.svg</file>
+    </qresource>
+</RCC>

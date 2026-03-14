@@ -1,0 +1,4 @@
+// Windows application icon resource script
+// The IDI_ICON1 entry embeds the .ico into the compiled .exe so that
+// Windows Explorer, the taskbar, and the Alt+Tab switcher all show it.
+IDI_ICON1 ICON "..\\assets\\icons\\hg_icon.ico"
