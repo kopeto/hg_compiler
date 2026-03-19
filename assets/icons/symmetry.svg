@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- vertical axis -->
+  <line x1="12" y1="2" x2="12" y2="22" stroke="#444" stroke-width="1.6" stroke-dasharray="3,2"/>
+  <!-- left square -->
+  <rect x="3" y="7" width="7" height="10" rx="1" fill="none" stroke="#444" stroke-width="1.6"/>
+  <!-- right square (mirror) -->
+  <rect x="14" y="7" width="7" height="10" rx="1" fill="#444" fill-opacity="0.25" stroke="#444" stroke-width="1.6"/>
+</svg>

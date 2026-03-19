@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "clue.h"
+#include "eeh_worker.h"
 #include "hg_config.h"
 #include "paths.h"
 #include "puz_serializer.h"
@@ -11,6 +12,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QDebug>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -45,6 +47,19 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     _dictPath = _config.dictPath.isEmpty() ? HG::defaultDictPath() : _config.dictPath;
     _dict     = std::make_unique<Dict>(_dictPath.toStdString());
 
+    // EEH database: open once at startup; non-fatal if missing.
+    const QString dbPath = HG::defaultDbPath();
+    // Start EEH worker thread and initialise DB there to avoid blocking UI
+    _eehThread = new QThread(this);
+    _eehWorker = new EehWorker();
+    _eehWorker->moveToThread(_eehThread);
+    connect(_eehThread, &QThread::finished, _eehWorker, &QObject::deleteLater);
+    connect(this, &MainWindow::requestEehLookup, _eehWorker, &EehWorker::lookup, Qt::QueuedConnection);
+    connect(_eehWorker, &EehWorker::lookupDone, this, &MainWindow::onEehLookupDone, Qt::QueuedConnection);
+    _eehThread->start();
+    // Initialise DB inside worker thread
+    QMetaObject::invokeMethod(_eehWorker, "init", Qt::QueuedConnection, Q_ARG(QString, dbPath));
+
     _refreshTimer = new QTimer(this);
     _refreshTimer->setInterval(250); // 4 Hz
     connect(_refreshTimer, &QTimer::timeout, this, &MainWindow::onRefreshTimer);
@@ -56,6 +71,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 
 MainWindow::~MainWindow() {
     forceStopSolver();
+    if (_eehThread) {
+        _eehThread->quit();
+        _eehThread->wait();
+        _eehThread = nullptr;
+        _eehWorker = nullptr;
+    }
 }
 
 // ── UI setup ─────────────────────────────────────────────────
@@ -68,7 +89,7 @@ void MainWindow::setupMenuBar() {
     actQuit->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q));
     connect(actQuit, &QAction::triggered, qApp, &QApplication::quit);
 
-    // ── PUZ ──
+    // Restored PUZ menu (previous line removed accidentally).
     QMenu* puzMenu = menuBar()->addMenu(tr("&PUZ"));
 
     QAction* actImport = puzMenu->addAction(tr("&Import .puz…"));
@@ -100,9 +121,10 @@ void MainWindow::setupMenuBar() {
 
     gridMenu->addSeparator();
 
-    _actEditMode = gridMenu->addAction(tr("&Edit Mode (toggle black cells)"));
+    _actEditMode = gridMenu->addAction(tr("&Editatze modua"));
     _actEditMode->setCheckable(true);
     _actEditMode->setShortcut(Qt::Key_F2);
+    _actEditMode->setToolTip(tr("Editatze modua (F2)\nKoadroko gelaxka beltzak gehitu/kentzeko."));
     connect(_actEditMode, &QAction::toggled, this, &MainWindow::onToggleEditMode);
 
     // ── Dictionary ──
@@ -131,6 +153,24 @@ void MainWindow::setupMenuBar() {
     _actResume->setShortcut(Qt::Key_F6);
     _actResume->setEnabled(false);
     connect(_actResume, &QAction::triggered, this, &MainWindow::onResumeSolver);
+
+    // ── Toolbar (below menu bar) ──────────────────────────────────────
+    _toolbar = addToolBar(tr("Main Toolbar"));
+    _toolbar->setMovable(false);
+    _toolbar->setFloatable(false);
+    _toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+
+    // Re-use the existing checkable action so menu and toolbar stay in sync
+    _actEditMode->setIcon(QIcon(":/icons/edit_mode.svg"));
+    _toolbar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    _toolbar->addAction(_actEditMode);
+
+    _actSymmetry = new QAction(QIcon(":/icons/symmetry.svg"), tr("Simetria"), this);
+    _actSymmetry->setCheckable(true);
+    _actSymmetry->setToolTip(tr("Simetria (180\u00b0)\nGelaxka beltzak ardatz simetrikoan gehitu/kentzeko."));
+    _actSymmetry->setEnabled(false); // only active in edit mode
+    // Connection to _gridWidget done in setupCentralWidget() after it is created
+    _toolbar->addAction(_actSymmetry);
 }
 
 void MainWindow::setupCentralWidget() {
@@ -144,10 +184,9 @@ void MainWindow::setupCentralWidget() {
     connect(_gridWidget, &GridWidget::gridModified, this, &MainWindow::onGridModified);
     connect(_gridWidget, &GridWidget::cellFixed, this, &MainWindow::onCellFixed);
     connect(_gridWidget, &GridWidget::selectionChanged, this, &MainWindow::onSelectionChanged);
-    // interactionRequested: activate cancel flag immediately (non-blocking).
-    // The solver thread will finish on its own at the next recursive check.
-    // No wait() here — that would deadlock the UI thread.
     connect(_gridWidget, &GridWidget::interactionRequested, this, &MainWindow::pauseSolver, Qt::DirectConnection);
+    // Symmetry action created in setupMenuBar(); connect now that _gridWidget exists
+    connect(_actSymmetry, &QAction::toggled, _gridWidget, &GridWidget::setSymmetry);
 
     _gridArea = new QWidget(this);
     _gridArea->setStyleSheet(HG::Styles::kGridArea);
@@ -232,13 +271,6 @@ void MainWindow::setupCentralWidget() {
     connect(_clearButton, &QPushButton::clicked, this, &MainWindow::onClearGrid);
     btnLayout->addWidget(_clearButton);
 
-    _symmetryCheck = new QCheckBox(tr("Koadro Simetrikoa"), btnRow);
-    _symmetryCheck->setToolTip(tr("Activate 180\u00b0 rotational symmetry for black cells"));
-    _symmetryCheck->setEnabled(false); // only active in edit mode
-    _symmetryCheck->setStyleSheet(HG::Styles::kSymmetryCheck);
-    connect(_symmetryCheck, &QCheckBox::toggled, _gridWidget, &GridWidget::setSymmetry);
-    btnLayout->addWidget(_symmetryCheck);
-
     btnLayout->addStretch();
 
     bottomLayout->addWidget(btnRow);
@@ -254,16 +286,7 @@ void MainWindow::setupCentralWidget() {
 
     auto* rightLayout = new QVBoxLayout(rightPanel);
 
-    _dictLabel = new QLabel(this);
-    _dictLabel->setWordWrap(true);
-    _dictLabel->setStyleSheet(HG::Styles::kSmallMuted);
-    rightLayout->addWidget(_dictLabel);
-    updateDictLabel();
-
-    _editModeLabel = new QLabel(this);
-    _editModeLabel->setStyleSheet(HG::Styles::kSmallLabel);
-    rightLayout->addWidget(_editModeLabel);
-    updateEditModeIndicator();
+    // Removed UI: dictionary label and edit-mode label were deleted from right panel
 
     _statusLabel = new QLabel(tr("Ready"), rightPanel);
     _statusLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
@@ -279,6 +302,10 @@ void MainWindow::setupCentralWidget() {
     _wordList->setAlternatingRowColors(true);
     _wordList->setStyleSheet(HG::Styles::kWordList);
     connect(_wordList, &QListWidget::itemDoubleClicked, this, &MainWindow::onWordListDoubleClicked);
+    connect(_wordList, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+        if (item)
+            lookupWord(item->text());
+    });
     rightLayout->addWidget(_wordList, /*stretch=*/1);
 
     auto* clueLabel = new QLabel(tr("Pista:"), rightPanel);
@@ -294,6 +321,18 @@ void MainWindow::setupCentralWidget() {
     connect(_clueEdit, &QTextEdit::textChanged, this, &MainWindow::onClueChanged);
 
     mainLayout->addWidget(rightPanel, /*stretch=*/1);
+
+    // ── Info panel: definitions & examples (EEH) ──
+    auto* infoPanel = new QFrame(this);
+    infoPanel->setFrameShape(QFrame::StyledPanel);
+    infoPanel->setMinimumWidth(280);
+    auto* infoLayout = new QVBoxLayout(infoPanel);
+    infoLayout->setContentsMargins(8, 8, 8, 8);
+    _eehBrowser = new QTextBrowser(infoPanel);
+    _eehBrowser->setOpenExternalLinks(true);
+    _eehBrowser->setPlaceholderText(tr("Definitions and examples will appear here..."));
+    infoLayout->addWidget(_eehBrowser, /*stretch=*/1);
+    mainLayout->addWidget(infoPanel, /*stretch=*/0);
 
     setCentralWidget(centralWidget);
     statusBar()->showMessage(tr("Ready"));
@@ -400,10 +439,16 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir) {
     //   empty cell ('_')                       → '_' (wildcard)
     std::string patStr;
     patStr.reserve(gw->length);
+    bool complete = true;
     for (const Cell* cell : gw->cells) {
         char v = static_cast<char>(std::toupper((unsigned char)cell->value));
         patStr += (v != '_') ? v : '_';
+        if (v == '_')
+            complete = false;
     }
+
+    if (complete)
+        lookupWord(QString::fromStdString(patStr));
 
     Pattern                  pat(patStr);
     std::vector<const Word*> candidates = _dict->getWordsByPattern(pat);
@@ -447,6 +492,43 @@ void MainWindow::onWordListDoubleClicked(QListWidgetItem* item) {
 
     // Refresh candidate list to reflect the new (fully fixed) pattern
     updateWordList(row, col, dir);
+}
+
+void MainWindow::lookupWord(const QString& word) {
+    // Forward the lookup request to the worker thread (non-blocking)
+    emit requestEehLookup(word);
+}
+
+void MainWindow::onEehLookupDone(const QString& word, bool found, const QStringList& defs,
+                                 const QStringList& examples) {
+    if (!_eehBrowser)
+        return;
+
+    QString html;
+    html += QString("<h2>%1</h2>").arg(word.toHtmlEscaped());
+    if (!found || defs.isEmpty()) {
+        html += QString("<p><i>%1</i></p>").arg(tr("No definition found."));
+        _eehBrowser->setHtml(html);
+        return;
+    }
+
+    html += "<div>";
+    html += "<h3>Definitions</h3>";
+    html += "<ol>";
+    for (const QString& d : defs)
+        html += QString("<li>%1</li>").arg(d.toHtmlEscaped());
+    html += "</ol>";
+
+    if (!examples.isEmpty()) {
+        html += "<h3>Adibideak (Examples)</h3>";
+        html += "<ul>";
+        for (const QString& ex : examples)
+            html += QString("<li>%1</li>").arg(ex.toHtmlEscaped());
+        html += "</ul>";
+    }
+    html += "</div>";
+
+    _eehBrowser->setHtml(html);
 }
 
 void MainWindow::onClueChanged() {
@@ -510,20 +592,16 @@ void MainWindow::onNewBlankGrid() {
 
 void MainWindow::onToggleEditMode(bool checked) {
     _gridWidget->setEditMode(checked);
-    if (_symmetryCheck)
-        _symmetryCheck->setEnabled(checked);
+    if (_actSymmetry)
+        _actSymmetry->setEnabled(checked);
     updateEditModeIndicator();
     statusBar()->showMessage(
         checked ? tr("Edit mode ON — right-click a cell to toggle black/white") : tr("Edit mode OFF"), 3000);
 }
 
 void MainWindow::updateEditModeIndicator() {
-    if (!_editModeLabel)
-        return;
-    if (_gridWidget && _gridWidget->editMode())
-        _editModeLabel->setText(tr("✏️ Edit mode ON"));
-    else
-        _editModeLabel->setText(tr("🔒 Edit mode OFF"));
+    // Edit mode indicator removed from UI; keep function for compatibility.
+    Q_UNUSED(_gridWidget);
 }
 
 void MainWindow::onOpenGrid() {
@@ -828,12 +906,9 @@ void MainWindow::onLoadCustomDictionary() {
 }
 
 void MainWindow::updateDictLabel() {
-    if (!_dictLabel)
-        return;
-    if (_dict)
-        _dictLabel->setText(tr("📖 %1").arg(QFileInfo(_dictPath).fileName()));
-    else
-        _dictLabel->setText(tr("⚠️ No dictionary loaded"));
+    // Dictionary label removed from UI; no-op to preserve external calls.
+    Q_UNUSED(_dict);
+    Q_UNUSED(_dictPath);
 }
 
 void MainWindow::onGridModified() {

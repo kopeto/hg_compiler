@@ -31,7 +31,7 @@ set(CMAKE_DISABLE_FIND_PACKAGE_WrapVulkanHeaders TRUE)
 # Find and link Qt6
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network Sql)
 
 # Source files (adjust to your actual project structure)
 file(GLOB_RECURSE HG_SOURCES CONFIGURE_DEPENDS
@@ -75,13 +75,17 @@ if(ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
 endif()
 
 # Expose timer instrumentation as a numeric compile definition (0/1).
+# For the installed/packaged binary we avoid embedding an absolute developer
+# source path. Use a relative assets path for the runtime binary so the
+# packaged app doesn't contain local developer folders. Unit tests still get
+# explicit source paths below when needed.
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         HG_ENABLE_TIMERS=$<IF:$<BOOL:${ENABLE_TIMERS}>,1,0>
         HG_PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-        HG_ASSETS_PATH="${CMAKE_SOURCE_DIR}/assets/"
-        HG_DEFAULT_DICTIONARY_PATH="${CMAKE_SOURCE_DIR}/assets/words/garbi_r_gabe.txt"
-        HG_DEFAULT_GRID_PATH="${CMAKE_SOURCE_DIR}/assets/grids/basic_6x6.grid"
+        HG_ASSETS_PATH="assets/"
+        HG_DEFAULT_DICTIONARY_PATH="assets/words/garbi_r_gabe.txt"
+        HG_DEFAULT_GRID_PATH="assets/grids/basic_6x6.grid"
         HG_ENABLE_PROFILER=$<IF:$<BOOL:${ENABLE_PROFILER}>,1,0>
 )
 
@@ -89,6 +93,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Threads::Threads
     Qt6::Widgets
     Qt6::Network
+    Qt6::Sql
 )
 
 # Tests

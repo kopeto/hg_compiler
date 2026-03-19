@@ -3,3 +3,8 @@
 [Dd]eploy
 
 *.puz
+
+*.sql
+
+__pycache__/
+*.pyc

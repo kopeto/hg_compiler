@@ -2,6 +2,7 @@
 
 #include "crossword.h"
 #include "dict.h"
+#include "eeh_db.h"
 #include "hg_config.h"
 #include "ui/gridwidget.h"
 #include "ui/solverworker.h"
@@ -12,9 +13,11 @@
 #include <QListWidget>
 #include <QMainWindow>
 #include <QPushButton>
+#include <QTextBrowser>
 #include <QTextEdit>
 #include <QThread>
 #include <QTimer>
+#include <QToolBar>
 #include <functional>
 #include <memory>
 
@@ -69,33 +72,39 @@ private:
     void adjustWindowForGrid();
     // Sync metadata text fields from _crossword.
     void syncMetaToWidgets();
+    // Look up word in EEH DB and print definitions to stdout (temporary).
+    void lookupWord(const QString& word);
 
     // ── UI ──
-    GridWidget*  _gridWidget        = nullptr;
-    QWidget*     _gridArea          = nullptr; // container that centres GridWidget
-    QLabel*      _statusLabel       = nullptr;
-    QLabel*      _dictLabel         = nullptr;
-    QLabel*      _editModeLabel     = nullptr;
-    QCheckBox*   _symmetryCheck     = nullptr;
-    QPushButton* _resumeButton      = nullptr;
-    QPushButton* _clearButton       = nullptr;
-    QLineEdit*   _metaTitleEdit     = nullptr;
-    QLineEdit*   _metaAuthorEdit    = nullptr;
-    QLineEdit*   _metaCopyrightEdit = nullptr;
-    QLabel*      _wordListLabel     = nullptr;
-    QListWidget* _wordList          = nullptr;
-    QTextEdit*   _clueEdit          = nullptr;
-    QAction*     _actEditMode       = nullptr;
-    QAction*     _actSolve          = nullptr;
-    QAction*     _actStop           = nullptr;
-    QAction*     _actResume         = nullptr;
+    GridWidget* _gridWidget  = nullptr;
+    QWidget*    _gridArea    = nullptr; // container that centres GridWidget
+    QLabel*     _statusLabel = nullptr;
+
+    QPushButton*  _resumeButton      = nullptr;
+    QPushButton*  _clearButton       = nullptr;
+    QLineEdit*    _metaTitleEdit     = nullptr;
+    QLineEdit*    _metaAuthorEdit    = nullptr;
+    QLineEdit*    _metaCopyrightEdit = nullptr;
+    QLabel*       _wordListLabel     = nullptr;
+    QListWidget*  _wordList          = nullptr;
+    QTextEdit*    _clueEdit          = nullptr;
+    QTextBrowser* _eehBrowser        = nullptr; // panel to show definitions/examples
+    QAction*      _actEditMode       = nullptr;
+    QAction*      _actSymmetry       = nullptr;
+    QAction*      _actSolve          = nullptr;
+    QAction*      _actStop           = nullptr;
+    QAction*      _actResume         = nullptr;
+    QToolBar*     _toolbar           = nullptr;
 
     // ── Domain ──
     std::unique_ptr<Crossword> _crossword;
     std::unique_ptr<Dict>      _dict;
-    std::string                _currentGridPath;
-    QString                    _dictPath;
-    HgConfig                   _config;
+    // EEH DB is accessed via a worker thread to avoid blocking the UI.
+    QThread*         _eehThread = nullptr;
+    class EehWorker* _eehWorker = nullptr;
+    std::string      _currentGridPath;
+    QString          _dictPath;
+    HgConfig         _config;
 
     // ── Solver thread ──
     QThread*      _solverThread = nullptr;
@@ -108,4 +117,12 @@ private:
     // Action deferred until the solver thread has stopped.
     // Set by pauseSolver(); executed at the top of onSolverFinished().
     std::function<void()> _pendingAfterStop;
+
+signals:
+    // Request worker to perform a lookup (queued connection)
+    void requestEehLookup(const QString& word);
+
+private slots:
+    // Called when worker finishes a lookup
+    void onEehLookupDone(const QString& word, bool found, const QStringList& defs, const QStringList& examples);
 };

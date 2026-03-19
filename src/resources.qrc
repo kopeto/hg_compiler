@@ -2,5 +2,7 @@
     <qresource prefix="/icons">
         <file alias="hg_icon.png">../assets/icons/hg_icon.png</file>
         <file alias="hg_icon.svg">../assets/icons/hg_icon.svg</file>
+        <file alias="edit_mode.svg">../assets/icons/edit_mode.svg</file>
+        <file alias="symmetry.svg">../assets/icons/symmetry.svg</file>
     </qresource>
 </RCC>

@@ -44,4 +44,9 @@ inline QString defaultDictPath() {
     return assetsPath() + "words/garbi_r_gabe.txt";
 }
 
+/// EEH SQLite database path resolved at runtime.
+inline QString defaultDbPath() {
+    return assetsPath() + "db/eeh.sqlite";
+}
+
 } // namespace HG
