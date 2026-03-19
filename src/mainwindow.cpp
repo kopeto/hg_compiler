@@ -83,39 +83,39 @@ MainWindow::~MainWindow() {
 
 void MainWindow::setupMenuBar() {
     // ── File ──
-    QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    QMenu* fileMenu = menuBar()->addMenu(tr("&Fitxategia"));
 
-    QAction* actQuit = fileMenu->addAction(tr("&Quit"));
+    QAction* actQuit = fileMenu->addAction(tr("&Irten"));
     actQuit->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q));
     connect(actQuit, &QAction::triggered, qApp, &QApplication::quit);
 
     // Restored PUZ menu (previous line removed accidentally).
     QMenu* puzMenu = menuBar()->addMenu(tr("&PUZ"));
 
-    QAction* actImport = puzMenu->addAction(tr("&Import .puz…"));
+    QAction* actImport = puzMenu->addAction(tr("&Inportatu .puz…"));
     actImport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
     connect(actImport, &QAction::triggered, this, &MainWindow::onImportPuz);
 
-    QAction* actExport = puzMenu->addAction(tr("&Export as .puz…"));
+    QAction* actExport = puzMenu->addAction(tr("&Esportatu .puz gisa…"));
     actExport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
     connect(actExport, &QAction::triggered, this, &MainWindow::onExportPuz);
 
-    QAction* actUpload = puzMenu->addAction(tr("&Upload .puz to server…"));
+    QAction* actUpload = puzMenu->addAction(tr("&Igo .puz zerbitzarira…"));
     actUpload->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_U));
     connect(actUpload, &QAction::triggered, this, &MainWindow::onUploadPuz);
 
     // ── Grid ──
-    QMenu* gridMenu = menuBar()->addMenu(tr("&Grid"));
+    QMenu* gridMenu = menuBar()->addMenu(tr("&Koadroa"));
 
-    QAction* actNewBlank = gridMenu->addAction(tr("&New Blank Grid…"));
+    QAction* actNewBlank = gridMenu->addAction(tr("&Koadro Berri Hutsua…"));
     actNewBlank->setShortcut(QKeySequence::New);
     connect(actNewBlank, &QAction::triggered, this, &MainWindow::onNewBlankGrid);
 
-    QAction* actOpen = gridMenu->addAction(tr("&Open Grid…"));
+    QAction* actOpen = gridMenu->addAction(tr("&Ireki Koadroa…"));
     actOpen->setShortcut(QKeySequence::Open);
     connect(actOpen, &QAction::triggered, this, &MainWindow::onOpenGrid);
 
-    QAction* actSave = gridMenu->addAction(tr("&Save Grid…"));
+    QAction* actSave = gridMenu->addAction(tr("&Gorde Koadroa…"));
     actSave->setShortcut(QKeySequence::Save);
     connect(actSave, &QAction::triggered, this, &MainWindow::onSaveGrid);
 
@@ -128,34 +128,34 @@ void MainWindow::setupMenuBar() {
     connect(_actEditMode, &QAction::toggled, this, &MainWindow::onToggleEditMode);
 
     // ── Dictionary ──
-    QMenu* dictMenu = menuBar()->addMenu(tr("&Dictionary"));
+    QMenu* dictMenu = menuBar()->addMenu(tr("&Hiztegia"));
 
-    QAction* actDefDict = dictMenu->addAction(tr("Load &Default Dictionary"));
+    QAction* actDefDict = dictMenu->addAction(tr("Kargatu &Lehenetsitako Hiztegia"));
     actDefDict->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
     connect(actDefDict, &QAction::triggered, this, &MainWindow::onLoadDefaultDictionary);
 
-    QAction* actCustDict = dictMenu->addAction(tr("Load &Custom Dictionary…"));
+    QAction* actCustDict = dictMenu->addAction(tr("Kargatu &Hiztegi Pertsonalizatua…"));
     actCustDict->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
     connect(actCustDict, &QAction::triggered, this, &MainWindow::onLoadCustomDictionary);
 
     // ── Solver ──
-    QMenu* solverMenu = menuBar()->addMenu(tr("&Solver"));
+    QMenu* solverMenu = menuBar()->addMenu(tr("&Konponketa"));
 
-    _actSolve = solverMenu->addAction(tr("&Solve"));
+    _actSolve = solverMenu->addAction(tr("&Ebaztu"));
     _actSolve->setShortcut(Qt::Key_F5);
     connect(_actSolve, &QAction::triggered, this, &MainWindow::onSolve);
 
-    _actStop = solverMenu->addAction(tr("&Pause (Esc)"));
+    _actStop = solverMenu->addAction(tr("&Pausatu (Esc)"));
     _actStop->setShortcut(Qt::Key_Escape);
     connect(_actStop, &QAction::triggered, this, &MainWindow::pauseSolver);
 
-    _actResume = solverMenu->addAction(tr("&Resume"));
+    _actResume = solverMenu->addAction(tr("&Jarraitu"));
     _actResume->setShortcut(Qt::Key_F6);
     _actResume->setEnabled(false);
     connect(_actResume, &QAction::triggered, this, &MainWindow::onResumeSolver);
 
     // ── Toolbar (below menu bar) ──────────────────────────────────────
-    _toolbar = addToolBar(tr("Main Toolbar"));
+    _toolbar = addToolBar(tr("Tresna-barra"));
     _toolbar->setMovable(false);
     _toolbar->setFloatable(false);
     _toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -262,12 +262,12 @@ void MainWindow::setupCentralWidget() {
         return btn;
     };
 
-    _resumeButton = makeBtn(tr("\u25b6  Resume"), tr("Resume solver (F6)"));
+    _resumeButton = makeBtn(tr("\u25b6  Jarraitu"), tr("Ebazlea jarraitu (F6)"));
     _resumeButton->setVisible(false);
     connect(_resumeButton, &QPushButton::clicked, this, &MainWindow::onResumeSolver);
     btnLayout->addWidget(_resumeButton);
 
-    _clearButton = makeBtn(tr("Koadroa Garbitu"), tr("Remove all letters, keeping only black cells"));
+    _clearButton = makeBtn(tr("Koadroa Garbitu"), tr("Kendu letra guztiak, gelaxka beltzak utzita"));
     connect(_clearButton, &QPushButton::clicked, this, &MainWindow::onClearGrid);
     btnLayout->addWidget(_clearButton);
 
@@ -288,13 +288,13 @@ void MainWindow::setupCentralWidget() {
 
     // Removed UI: dictionary label and edit-mode label were deleted from right panel
 
-    _statusLabel = new QLabel(tr("Ready"), rightPanel);
+    _statusLabel = new QLabel(tr("Prest"), rightPanel);
     _statusLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     _statusLabel->setWordWrap(true);
     rightLayout->addWidget(_statusLabel);
 
     // Word list: shows candidates for the currently selected word
-    _wordListLabel = new QLabel(tr("Candidates:"), rightPanel);
+    _wordListLabel = new QLabel(tr("Hautagaiak:"), rightPanel);
     _wordListLabel->setStyleSheet(HG::Styles::kSmallBold);
     rightLayout->addWidget(_wordListLabel);
 
@@ -330,12 +330,12 @@ void MainWindow::setupCentralWidget() {
     infoLayout->setContentsMargins(8, 8, 8, 8);
     _eehBrowser = new QTextBrowser(infoPanel);
     _eehBrowser->setOpenExternalLinks(true);
-    _eehBrowser->setPlaceholderText(tr("Definitions and examples will appear here..."));
+    _eehBrowser->setPlaceholderText(tr("Definizioak eta adibideak hemen agertuko dira..."));
     infoLayout->addWidget(_eehBrowser, /*stretch=*/1);
     mainLayout->addWidget(infoPanel, /*stretch=*/0);
 
     setCentralWidget(centralWidget);
-    statusBar()->showMessage(tr("Ready"));
+    statusBar()->showMessage(tr("Prest"));
 }
 
 // ── Domain helpers ────────────────────────────────────────────
@@ -373,9 +373,9 @@ void MainWindow::loadDefaultGrid() {
         syncMetaToWidgets();
         // Always start in edit mode
         _actEditMode->setChecked(true);
-        statusBar()->showMessage(tr("Default grid loaded."));
+        statusBar()->showMessage(tr("Lehenetsitako koadroa kargatu da."));
     } catch (const std::exception& e) {
-        QMessageBox::warning(this, tr("Load error"), QString::fromStdString(e.what()));
+        QMessageBox::warning(this, tr("Kargatze errorea"), QString::fromStdString(e.what()));
     }
 }
 
@@ -430,7 +430,7 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir) {
 
     // ── Candidate list: also needs a dict ──
     if (!_crossword || !_dict || !gw || row < 0) {
-        _wordListLabel->setText(tr("Candidates:"));
+        _wordListLabel->setText(tr("Hautagaiak:"));
         return;
     }
 
@@ -453,7 +453,7 @@ void MainWindow::updateWordList(int row, int col, GridWordDirection dir) {
     Pattern                  pat(patStr);
     std::vector<const Word*> candidates = _dict->getWordsByPattern(pat);
 
-    _wordListLabel->setText(tr("Candidates (%1):").arg(candidates.size()));
+    _wordListLabel->setText(tr("Hautagaiak (%1):").arg(candidates.size()));
 
     for (const Word* w : candidates) {
         auto* item = new QListWidgetItem(QString::fromStdString(w->str));
@@ -507,7 +507,7 @@ void MainWindow::onEehLookupDone(const QString& word, bool found, const QStringL
     QString html;
     html += QString("<h2>%1</h2>").arg(word.toHtmlEscaped());
     if (!found || defs.isEmpty()) {
-        html += QString("<p><i>%1</i></p>").arg(tr("No definition found."));
+        html += QString("<p><i>%1</i></p>").arg(tr("Ez da definiziorik aurkitu."));
         _eehBrowser->setHtml(html);
         return;
     }
@@ -582,11 +582,11 @@ void MainWindow::onNewBlankGrid() {
         adjustWindowForGrid();
         syncMetaToWidgets();
         _actEditMode->setChecked(true);
-        statusBar()->showMessage(tr("New %1×%2 grid created. Edit mode ON.")
+        statusBar()->showMessage(tr("Sortu da %1×%2 koadro berria. Editatze modua gaituta.")
                                      .arg(charLayout.size())
                                      .arg(charLayout.isEmpty() ? 0 : charLayout[0].size()));
     } catch (const std::exception& e) {
-        QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));
+        QMessageBox::critical(this, tr("Errorea"), QString::fromStdString(e.what()));
     }
 }
 
@@ -596,7 +596,9 @@ void MainWindow::onToggleEditMode(bool checked) {
         _actSymmetry->setEnabled(checked);
     updateEditModeIndicator();
     statusBar()->showMessage(
-        checked ? tr("Edit mode ON — right-click a cell to toggle black/white") : tr("Edit mode OFF"), 3000);
+        checked ? tr("Editatze modua gaituta — egin klik eskuineko botoiarekin gelaxka beltz/zuri bihurtzeko")
+                : tr("Editatze modua desgaituta"),
+        3000);
 }
 
 void MainWindow::updateEditModeIndicator() {
@@ -607,7 +609,7 @@ void MainWindow::updateEditModeIndicator() {
 void MainWindow::onOpenGrid() {
     forceStopSolver();
     QString path =
-        QFileDialog::getOpenFileName(this, tr("Open Grid"), QString(), tr("Grid files (*.grid);;All files (*)"));
+        QFileDialog::getOpenFileName(this, tr("Koadroa Ireki"), QString(), tr("Koadro fitxategiak (*.grid);;Fitxategi guztiak (*)"));
     if (path.isEmpty())
         return;
 
@@ -618,21 +620,21 @@ void MainWindow::onOpenGrid() {
         adjustWindowForGrid();
         syncMetaToWidgets();
         _actEditMode->setChecked(true);
-        statusBar()->showMessage(tr("Grid loaded: %1").arg(path));
+        statusBar()->showMessage(tr("Koadroa kargatu da: %1").arg(path));
     } catch (const std::exception& e) {
-        QMessageBox::critical(this, tr("Load error"), QString::fromStdString(e.what()));
+        QMessageBox::critical(this, tr("Kargatze errorea"), QString::fromStdString(e.what()));
     }
 }
 
 void MainWindow::onSaveGrid() {
     QString path =
-        QFileDialog::getSaveFileName(this, tr("Save Grid"), QString(), tr("Grid files (*.grid);;All files (*)"));
+        QFileDialog::getSaveFileName(this, tr("Gorde Koadroa"), QString(), tr("Koadro fitxategiak (*.grid);;Fitxategi guztiak (*)"));
     if (path.isEmpty())
         return;
 
     QFile f(path);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, tr("Save error"), tr("Cannot open file for writing."));
+        QMessageBox::critical(this, tr("Gorde errorea"), tr("Ezin da fitxategia idazteko irekitu."));
         return;
     }
     QTextStream out(&f);
@@ -645,14 +647,14 @@ void MainWindow::onSaveGrid() {
             out << QChar(c == '#' ? '#' : '.');
         out << '\n';
     }
-    statusBar()->showMessage(tr("Grid saved: %1").arg(path));
+    statusBar()->showMessage(tr("Koadroa gorde da: %1").arg(path));
 }
 
 // ── Export .puz ─────────────────────────────────────────────
 
 void MainWindow::onExportPuz() {
     if (!_crossword) {
-        QMessageBox::warning(this, tr("Export"), tr("No grid loaded."));
+        QMessageBox::warning(this, tr("Esportatu"), tr("Ez dago koadrorik kargatuta."));
         return;
     }
 
@@ -664,7 +666,7 @@ void MainWindow::onExportPuz() {
 
     QString path = dlg.filePath();
     if (path.isEmpty()) {
-        QMessageBox::warning(this, tr("Export"), tr("Ez da fitxategi-bidarik hautatu."));
+        QMessageBox::warning(this, tr("Esportatu"), tr("Ez da fitxategi-bidarik hautatu."));
         return;
     }
 
@@ -675,14 +677,14 @@ void MainWindow::onExportPuz() {
                                               dlg.author().toStdString(), dlg.copyright().toStdString());
 
     if (!err.isEmpty())
-        QMessageBox::critical(this, tr("Export Error"), err);
+        QMessageBox::critical(this, tr("Esportazio errorea"), err);
     else
-        statusBar()->showMessage(tr("Exported: %1").arg(QFileInfo(path).fileName()));
+        statusBar()->showMessage(tr("Esportatu da: %1").arg(QFileInfo(path).fileName()));
 }
 
 void MainWindow::onUploadPuz() {
     if (!_crossword) {
-        QMessageBox::warning(this, tr("Upload"), tr("No grid loaded."));
+        QMessageBox::warning(this, tr("Igo"), tr("Ez dago koadrorik kargatuta."));
         return;
     }
 
@@ -696,25 +698,25 @@ void MainWindow::onUploadPuz() {
     QString serverUrl = dlg.serverUrl();
     QString apiKey    = dlg.apiKey();
     if (serverUrl.isEmpty()) {
-        QMessageBox::warning(this, tr("Upload"), tr("Zerbitzariaren URLa falta da."));
+        QMessageBox::warning(this, tr("Igo"), tr("Zerbitzariaren URLa falta da."));
         return;
     }
 
     QUrl url(serverUrl);
     if (!url.isValid()) {
-        QMessageBox::warning(this, tr("Upload"), tr("URLa ez da baliozkoa: %1").arg(url.errorString()));
+        QMessageBox::warning(this, tr("Igo"), tr("URLa ez da baliozkoa: %1").arg(url.errorString()));
         return;
     }
 
     if (!QSslSocket::supportsSsl()) {
-        QMessageBox::critical(this, tr("Upload Error"),
+        QMessageBox::critical(this, tr("Igo errorea"),
                               tr("HTTPS ez dago erabilgarri: SSL/TLS backend-a falta da.\n"
                                  "Ziurtatu Qt TLS pluginak (qopensslbackend, qschannelbackend) eskuragarri daudela."));
         return;
     }
 
     if (apiKey.isEmpty()) {
-        QMessageBox::warning(this, tr("Upload"), tr("API Key falta da."));
+        QMessageBox::warning(this, tr("Igo"), tr("API Key falta da."));
         return;
     }
 
@@ -729,7 +731,7 @@ void MainWindow::onUploadPuz() {
                                                        dlg.author().toStdString(), dlg.copyright().toStdString());
 
     if (puzBytes.isEmpty()) {
-        QMessageBox::critical(this, tr("Upload Error"), tr("Ezin izan da .puz sortu."));
+        QMessageBox::critical(this, tr("Igo errorea"), tr("Ezin izan da .puz sortu."));
         return;
     }
 
@@ -750,37 +752,37 @@ void MainWindow::onUploadPuz() {
     QNetworkReply* reply   = manager->post(request, multiPart);
     multiPart->setParent(reply); // ensure multiPart is deleted with reply
 
-    statusBar()->showMessage(tr("Igotzen / Uploading…"));
+    statusBar()->showMessage(tr("Igotzen…"));
 
     connect(reply, &QNetworkReply::finished, this, [this, reply, manager]() {
         reply->deleteLater();
         manager->deleteLater();
 
-        if (reply->error() != QNetworkReply::NoError) {
-            QMessageBox::critical(this, tr("Upload Error"), tr("Errorea igotzen:\n%1").arg(reply->errorString()));
-            statusBar()->showMessage(tr("Upload failed"), 5000);
+            if (reply->error() != QNetworkReply::NoError) {
+            QMessageBox::critical(this, tr("Igo errorea"), tr("Errorea igotzen:\n%1").arg(reply->errorString()));
+            statusBar()->showMessage(tr("Igoera huts egin du"), 5000);
         } else {
             int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             if (httpStatus >= 200 && httpStatus < 300) {
-                statusBar()->showMessage(tr("Upload OK (HTTP %1)").arg(httpStatus), 5000);
+                statusBar()->showMessage(tr("Igoera ondo (HTTP %1)").arg(httpStatus), 5000);
             } else {
                 QString body = QString::fromUtf8(reply->readAll()).left(500);
-                QMessageBox::warning(this, tr("Upload"),
+                QMessageBox::warning(this, tr("Igo"),
                                      tr("Zerbitzariak HTTP %1 erantzun du.\n%2").arg(httpStatus).arg(body));
-                statusBar()->showMessage(tr("Upload: HTTP %1").arg(httpStatus), 5000);
+                statusBar()->showMessage(tr("Igoera: HTTP %1").arg(httpStatus), 5000);
             }
         }
     });
 }
 
 void MainWindow::onImportPuz() {
-    QString path = QFileDialog::getOpenFileName(this, tr("Import .puz"), QString(), tr("Across Lite (*.puz)"));
+    QString path = QFileDialog::getOpenFileName(this, tr("Inportatu .puz"), QString(), tr("Across Lite (*.puz)"));
     if (path.isEmpty())
         return;
 
     PuzData puzData = PuzSerializer::importFromFile(path);
     if (!puzData.errorMessage.isEmpty()) {
-        QMessageBox::critical(this, tr("Import Error"), puzData.errorMessage);
+        QMessageBox::critical(this, tr("Inportazio errorea"), puzData.errorMessage);
         return;
     }
 
@@ -845,7 +847,7 @@ void MainWindow::onImportPuz() {
     }
 
     updateWordList(-1, -1, GridWordDirection::ACROSS);
-    statusBar()->showMessage(tr("Imported: %1").arg(QFileInfo(path).fileName()));
+    statusBar()->showMessage(tr("Inportatu da: %1").arg(QFileInfo(path).fileName()));
 }
 
 // ── Dictionary slots ─────────────────────────────────────────
@@ -867,8 +869,8 @@ void MainWindow::onClearGrid() {
     // Restore edit mode (loadFromGrid resets the widget state)
     _actEditMode->setChecked(true);
     _wordList->clear();
-    _wordListLabel->setText(tr("Candidates:"));
-    statusBar()->showMessage(tr("Grid cleared."));
+    _wordListLabel->setText(tr("Hautagaiak:"));
+    statusBar()->showMessage(tr("Koadroa garbitu da."));
 }
 
 void MainWindow::onLoadDefaultDictionary() {
@@ -877,9 +879,9 @@ void MainWindow::onLoadDefaultDictionary() {
         _dict            = std::make_unique<Dict>(_dictPath.toStdString());
         _config.dictPath = "";
         _config.save();
-        statusBar()->showMessage(tr("Default dictionary loaded."), 3000);
+            statusBar()->showMessage(tr("Lehenetsitako hiztegia kargatu da."), 3000);
     } catch (const std::exception& e) {
-        QMessageBox::critical(this, tr("Dictionary error"), tr("Cannot load dictionary:\n%1").arg(e.what()));
+        QMessageBox::critical(this, tr("Hiztegi errorea"), tr("Ezin izan da hiztegia kargatu:\n%1").arg(e.what()));
         _dict = nullptr;
     }
     updateDictLabel();
@@ -887,7 +889,7 @@ void MainWindow::onLoadDefaultDictionary() {
 
 void MainWindow::onLoadCustomDictionary() {
     QString path =
-        QFileDialog::getOpenFileName(this, tr("Select Dictionary"), QString(), tr("Text files (*.txt);;All files (*)"));
+        QFileDialog::getOpenFileName(this, tr("Hautatu Hiztegia"), QString(), tr("Testu fitxategiak (*.txt);;Fitxategi guztiak (*)"));
     if (path.isEmpty())
         return;
 
@@ -897,9 +899,9 @@ void MainWindow::onLoadCustomDictionary() {
         _dict->load(path.toStdString());
         _config.dictPath = path;
         _config.save();
-        statusBar()->showMessage(tr("Dictionary loaded: %1").arg(path), 3000);
+        statusBar()->showMessage(tr("Hiztegia kargatu da: %1").arg(path), 3000);
     } catch (const std::exception& e) {
-        QMessageBox::critical(this, tr("Dictionary error"), tr("Cannot load dictionary:\n%1").arg(e.what()));
+        QMessageBox::critical(this, tr("Hiztegi errorea"), tr("Ezin izan da hiztegia kargatu:\n%1").arg(e.what()));
         _dict = nullptr;
     }
     updateDictLabel();
@@ -949,7 +951,7 @@ void MainWindow::onGridModified() {
             }
 
             statusBar()->showMessage(
-                tr("Grid updated — %1 across, %2 down").arg(g.getAcrossWords().size()).arg(g.getDownWords().size()),
+                tr("Koadroa eguneratu da — %1 zeharkako, %2 beherako").arg(g.getAcrossWords().size()).arg(g.getDownWords().size()),
                 2000);
 
             // Refresh candidate list — word structure may have changed
@@ -1025,7 +1027,7 @@ void MainWindow::onSolve() {
     if (_solving)
         return;
     if (!_crossword) {
-        QMessageBox::information(this, tr("Solver"), tr("No grid loaded."));
+        QMessageBox::information(this, tr("Konponketa"), tr("Ez dago koadrorik kargatuta."));
         return;
     }
 
@@ -1036,8 +1038,8 @@ void MainWindow::onSolve() {
     grid->reset();
     _gridWidget->loadFromGrid(*grid);
 
-    statusBar()->showMessage(tr("Solving…"));
-    _statusLabel->setText(tr("⏳ Solving…"));
+    statusBar()->showMessage(tr("Ebazten…"));
+    _statusLabel->setText(tr("⏳ Ebazten…"));
 
     _solving = true;
     _paused  = false;
@@ -1066,8 +1068,8 @@ void MainWindow::onResumeSolver() {
 
     Grid* grid = &_crossword->getGrid();
     // Do NOT reset — resume from the exact state the solver left off.
-    statusBar()->showMessage(tr("Solver resumed…"));
-    _statusLabel->setText(tr("⏳ Solving…"));
+    statusBar()->showMessage(tr("Konponketa jarraitu da"));
+    _statusLabel->setText(tr("⏳ Ebazten…"));
 
     _solverThread = new QThread(this);
     _solverWorker = new SolverWorker(grid, _dict.get());
@@ -1088,7 +1090,7 @@ void MainWindow::onStopSolver() {
     if (_solverWorker)
         _solverWorker->requestCancel();
     updateSolverActions();
-    statusBar()->showMessage(tr("Solver stopping…"));
+    statusBar()->showMessage(tr("Konponketa gelditzen…"));
 }
 
 void MainWindow::onSolverFinished(bool success) {
@@ -1119,8 +1121,8 @@ void MainWindow::onSolverFinished(bool success) {
     if (_paused) {
         // Keep the UI exactly as it was when the solver stopped — don't refresh.
         updateSolverActions();
-        statusBar()->showMessage(tr("Solver paused — press F6 or Resume to continue."));
-        _statusLabel->setText(tr("⏸ Paused"));
+        statusBar()->showMessage(tr("Konponketa geldirik — sakatu F6 edo Jarraitu jarraitzeko."));
+        _statusLabel->setText(tr("⏸ Pausatu"));
     } else {
         // Final UI snapshot only when finishing naturally (not paused)
         onRefreshTimer();
@@ -1128,13 +1130,13 @@ void MainWindow::onSolverFinished(bool success) {
         if (success) {
             _paused = false;
             updateSolverActions();
-            statusBar()->showMessage(tr("Solution found!"));
-            _statusLabel->setText(tr("✅ Solution found!"));
+            statusBar()->showMessage(tr("Irtenbidea aurkitu da!"));
+            _statusLabel->setText(tr("✅ Irtenbidea aurkitu da!"));
         } else {
             _paused = false;
             updateSolverActions();
-            statusBar()->showMessage(tr("No solution found."));
-            _statusLabel->setText(tr("❌ No solution found."));
+            statusBar()->showMessage(tr("Ez da irtenbiderik aurkitu."));
+            _statusLabel->setText(tr("❌ Ez da irtenbiderik aurkitu."));
         }
     }
 }

@@ -13,7 +13,7 @@ static constexpr int DEFAULT_COLS = 8;
 static constexpr int MAX_PREVIEW  = 480; // px — max scroll area size
 
 NewGridDialog::NewGridDialog(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(tr("New Blank Grid"));
+    setWindowTitle(tr("Koadro Berri Hutsua"));
     setModal(true);
 
     // ── Spinboxes ──────────────────────────────────────────
@@ -22,15 +22,15 @@ NewGridDialog::NewGridDialog(QWidget* parent) : QDialog(parent) {
     _rowsSpin = new QSpinBox(this);
     _rowsSpin->setRange(2, 30);
     _rowsSpin->setValue(DEFAULT_ROWS);
-    form->addRow(tr("Rows:"), _rowsSpin);
+    form->addRow(tr("Errenkadak:"), _rowsSpin);
 
     _colsSpin = new QSpinBox(this);
     _colsSpin->setRange(2, 30);
     _colsSpin->setValue(DEFAULT_COLS);
-    form->addRow(tr("Columns:"), _colsSpin);
+    form->addRow(tr("Zutabeak:"), _colsSpin);
 
     // ── Hint label ─────────────────────────────────────────
-    auto* hint = new QLabel(tr("Right-click a cell to toggle black / white"), this);
+    auto* hint = new QLabel(tr("Egin klik eskuineko botoiaz gelaxka beltz/zuri aldatzeko"), this);
     hint->setStyleSheet(HG::Styles::kSmallMuted);
 
     // ── Preview (GridWidget inside a scroll area) ──────────

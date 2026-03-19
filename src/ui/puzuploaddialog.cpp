@@ -77,7 +77,7 @@ PuzUploadDialog::PuzUploadDialog(Grid& grid, QWidget* parent) : QDialog(parent) 
 
     // ── Buttons ─────────────────────────────────────────────
     _buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    _buttons->button(QDialogButtonBox::Ok)->setText(tr("Igo / Upload"));
+    _buttons->button(QDialogButtonBox::Ok)->setText(tr("Igo"));
     connect(_buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 

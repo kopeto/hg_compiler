@@ -25,7 +25,7 @@ PuzExportDialog::PuzExportDialog(Grid& grid, QWidget* parent) : QDialog(parent) 
     auto* pathRow = new QHBoxLayout;
     _pathEdit     = new QLineEdit(this);
     _pathEdit->setPlaceholderText(tr("Aukeratu fitxategia…"));
-    auto* browseBtn = new QPushButton(tr("Browse…"), this);
+    auto* browseBtn = new QPushButton(tr("Arakatu…"), this);
     pathRow->addWidget(_pathEdit);
     pathRow->addWidget(browseBtn);
     form->addRow(tr("Fitxategia:"), pathRow);
