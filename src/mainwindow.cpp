@@ -516,7 +516,7 @@ void MainWindow::onEehLookupDone(const QString& word, bool found, const QStringL
     html += "<h3>Definitions</h3>";
     html += "<ol>";
     for (const QString& d : defs)
-        html += QString("<li>%1</li>").arg(d.toHtmlEscaped());
+        html += QString("<li>%1</li>").arg(d); // d is already HTML-formatted
     html += "</ol>";
 
     if (!examples.isEmpty()) {
@@ -608,8 +608,8 @@ void MainWindow::updateEditModeIndicator() {
 
 void MainWindow::onOpenGrid() {
     forceStopSolver();
-    QString path =
-        QFileDialog::getOpenFileName(this, tr("Koadroa Ireki"), QString(), tr("Koadro fitxategiak (*.grid);;Fitxategi guztiak (*)"));
+    QString path = QFileDialog::getOpenFileName(this, tr("Koadroa Ireki"), QString(),
+                                                tr("Koadro fitxategiak (*.grid);;Fitxategi guztiak (*)"));
     if (path.isEmpty())
         return;
 
@@ -627,8 +627,8 @@ void MainWindow::onOpenGrid() {
 }
 
 void MainWindow::onSaveGrid() {
-    QString path =
-        QFileDialog::getSaveFileName(this, tr("Gorde Koadroa"), QString(), tr("Koadro fitxategiak (*.grid);;Fitxategi guztiak (*)"));
+    QString path = QFileDialog::getSaveFileName(this, tr("Gorde Koadroa"), QString(),
+                                                tr("Koadro fitxategiak (*.grid);;Fitxategi guztiak (*)"));
     if (path.isEmpty())
         return;
 
@@ -758,7 +758,7 @@ void MainWindow::onUploadPuz() {
         reply->deleteLater();
         manager->deleteLater();
 
-            if (reply->error() != QNetworkReply::NoError) {
+        if (reply->error() != QNetworkReply::NoError) {
             QMessageBox::critical(this, tr("Igo errorea"), tr("Errorea igotzen:\n%1").arg(reply->errorString()));
             statusBar()->showMessage(tr("Igoera huts egin du"), 5000);
         } else {
@@ -879,7 +879,7 @@ void MainWindow::onLoadDefaultDictionary() {
         _dict            = std::make_unique<Dict>(_dictPath.toStdString());
         _config.dictPath = "";
         _config.save();
-            statusBar()->showMessage(tr("Lehenetsitako hiztegia kargatu da."), 3000);
+        statusBar()->showMessage(tr("Lehenetsitako hiztegia kargatu da."), 3000);
     } catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Hiztegi errorea"), tr("Ezin izan da hiztegia kargatu:\n%1").arg(e.what()));
         _dict = nullptr;
@@ -888,8 +888,8 @@ void MainWindow::onLoadDefaultDictionary() {
 }
 
 void MainWindow::onLoadCustomDictionary() {
-    QString path =
-        QFileDialog::getOpenFileName(this, tr("Hautatu Hiztegia"), QString(), tr("Testu fitxategiak (*.txt);;Fitxategi guztiak (*)"));
+    QString path = QFileDialog::getOpenFileName(this, tr("Hautatu Hiztegia"), QString(),
+                                                tr("Testu fitxategiak (*.txt);;Fitxategi guztiak (*)"));
     if (path.isEmpty())
         return;
 
@@ -950,9 +950,10 @@ void MainWindow::onGridModified() {
                 g.fixCell(fc.row, fc.col, fc.letter);
             }
 
-            statusBar()->showMessage(
-                tr("Koadroa eguneratu da — %1 zeharkako, %2 beherako").arg(g.getAcrossWords().size()).arg(g.getDownWords().size()),
-                2000);
+            statusBar()->showMessage(tr("Koadroa eguneratu da — %1 zeharkako, %2 beherako")
+                                         .arg(g.getAcrossWords().size())
+                                         .arg(g.getDownWords().size()),
+                                     2000);
 
             // Refresh candidate list — word structure may have changed
             updateWordList(_gridWidget->selectedRow(), _gridWidget->selectedCol(), _gridWidget->selectedDir());
