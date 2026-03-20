@@ -5,6 +5,7 @@
 *.puz
 
 *.sql
+*.sqlite
 
 __pycache__/
 *.pyc
